@@ -2,7 +2,7 @@
 <html lang="es" class="h-full bg-slate-950">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Bet-Gui Logistics & FSM Pro | Administrador & Técnico Unificado</title>
   
   <!-- Tailwind CSS CDN -->
@@ -104,6 +104,19 @@
     .leaflet-popup-tip {
       background: #0f172a !important;
       border: 1px solid #334155;
+    }
+
+    /* Soporte Móvil Responsivo para Android & iOS */
+    @media (min-width: 768px) {
+      #tecPanelContenido {
+        display: flex !important;
+      }
+      #tecMapContainer {
+        display: flex !important;
+      }
+    }
+    #tecnicoInterfaceContainer, #tecPanelContenido {
+      -webkit-overflow-scrolling: touch;
     }
   </style>
 </head>
@@ -324,62 +337,72 @@
   <!-- ================================================================= -->
   <!-- BARRA SUPERIOR GLOBAL & CONMUTADOR DE INTERFACES                  -->
   <!-- ================================================================= -->
-  <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 shrink-0 z-30">
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+  <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 shrink-0 z-30">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-3">
       
       <!-- Logotipo e Identidad -->
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-          <i data-lucide="route" class="w-5 h-5 text-white"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="font-bold text-base text-white tracking-tight">Bet-Gui Logistics & FSM Pro</h1>
-            <span id="badgeModoActivo" class="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
-              Consola Administrador
-            </span>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 sm:gap-2.5">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+            <i data-lucide="route" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
           </div>
-          <p class="text-[11px] text-slate-400">Rutas por Carreteras Reales, Control de SLAs y Gestión de Técnicos</p>
+          <div>
+            <div class="flex items-center gap-1.5 sm:gap-2">
+              <h1 class="font-bold text-sm sm:text-base text-white tracking-tight">Bet-Gui Logistics & FSM</h1>
+              <span id="badgeModoActivo" class="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                Consola Administrador
+              </span>
+            </div>
+            <p class="text-[10px] sm:text-[11px] text-slate-400 hidden sm:block">Rutas por Carreteras Reales, Control de SLAs y Gestión de Técnicos</p>
+          </div>
         </div>
+
+        <button 
+          onclick="cerrarSesion()" 
+          title="Cerrar sesión"
+          class="sm:hidden bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white p-1.5 rounded-lg border border-slate-700 transition">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        </button>
       </div>
 
       <!-- Estado de Sincronización en la Nube (MQTT / GitHub Pages) -->
-      <div class="flex items-center gap-2 flex-wrap text-xs">
-        <div id="cloudSyncBadge" class="flex items-center gap-1.5 text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-1.5 rounded-lg border border-emerald-500/30">
+      <div class="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 flex-wrap text-xs">
+        <div id="cloudSyncBadge" class="flex items-center gap-1.5 text-emerald-400 font-medium bg-emerald-500/10 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-emerald-500/30 text-[11px]">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Nube Sincronizada (MQTT WebSocket)</span>
+          <span class="hidden sm:inline">Nube Sincronizada (MQTT WebSocket)</span>
+          <span class="sm:hidden">MQTT Nube</span>
         </div>
 
         <!-- Conmutador Rápido de Interfaces (Admin vs Técnico) -->
-        <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <div class="flex items-center bg-slate-950 p-0.5 sm:p-1 rounded-xl border border-slate-800 text-[11px] sm:text-xs">
           <button 
             id="btnSwitchAdmin" 
             onclick="conmutarInterfaz('admin')" 
-            class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold flex items-center gap-1 transition">
+            class="px-2 sm:px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold flex items-center gap-1 transition">
             <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
-            <span>Administrador</span>
+            <span>Admin</span>
           </button>
           <button 
             id="btnSwitchTecnico" 
             onclick="conmutarInterfaz('tecnico')" 
-            class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-bold flex items-center gap-1 transition">
+            class="px-2 sm:px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-bold flex items-center gap-1 transition">
             <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
-            <span>Portal Técnico</span>
+            <span>Técnico</span>
           </button>
         </div>
 
         <button 
           onclick="abrirModalGestionTecnicos()" 
           title="Gestión de Técnicos y Candado Gerencial de Bajas"
-          class="bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white border border-amber-500/40 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 transition">
+          class="bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white border border-amber-500/40 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg font-semibold flex items-center gap-1 transition text-[11px]">
           <i data-lucide="users" class="w-3.5 h-3.5"></i>
-          <span>Gestión Técnicos</span>
+          <span class="hidden sm:inline">Gestión Técnicos</span>
         </button>
 
         <button 
           onclick="cerrarSesion()" 
           title="Cerrar sesión"
-          class="bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white p-1.5 rounded-lg border border-slate-700 transition">
+          class="hidden sm:flex bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white p-1.5 rounded-lg border border-slate-700 transition">
           <i data-lucide="log-out" class="w-4 h-4"></i>
         </button>
       </div>
@@ -751,10 +774,28 @@
   <!-- ================================================================= -->
   <!-- 3. INTERFAZ B: PORTAL MÓVIL DEL TÉCNICO EN CAMPO                  -->
   <!-- ================================================================= -->
-  <div id="tecnicoInterfaceContainer" class="hidden flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-950">
+  <div id="tecnicoInterfaceContainer" class="hidden flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-slate-950 min-h-0 w-full">
     
-    <!-- Panel Izquierdo / Superior de Órdenes del Técnico -->
-    <div class="w-full md:w-[440px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto p-4 space-y-3 text-xs">
+    <!-- Barra de Pestañas Móviles (Solo visible en Celulares Android / iOS < md) -->
+    <div class="md:hidden bg-slate-900/95 border-b border-slate-800 p-2 flex items-center gap-2 shrink-0 z-20 shadow-md">
+      <button 
+        id="tecTabBtnAcciones" 
+        onclick="conmutarTabTecnico('acciones')" 
+        class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition">
+        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+        <span>1. Orden & Acciones</span>
+      </button>
+      <button 
+        id="tecTabBtnMapa" 
+        onclick="conmutarTabTecnico('mapa')" 
+        class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+        <i data-lucide="map" class="w-4 h-4"></i>
+        <span>2. Ver Mapa Vial</span>
+      </button>
+    </div>
+
+    <!-- Panel de Órdenes y Botones de Acción del Técnico -->
+    <div id="tecPanelContenido" class="w-full md:w-[440px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto p-3.5 sm:p-4 space-y-3 text-xs pb-24 md:pb-6">
       
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between shadow-sm">
         <div class="flex items-center gap-2.5">
@@ -774,7 +815,7 @@
 
       <div>
         <label class="block text-slate-400 text-[10px] mb-1 font-semibold uppercase">Seleccionar Orden Asignada:</label>
-        <select id="tecOrdenSelect" onchange="seleccionarOrdenTecnico(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-emerald-500">
+        <select id="tecOrdenSelect" onchange="seleccionarOrdenTecnico(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500 text-xs">
         </select>
       </div>
 
@@ -807,10 +848,16 @@
           </div>
         </div>
 
-        <a id="btnNavGpsTec" href="#" target="_blank" class="w-full py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
-          <i data-lucide="navigation" class="w-4 h-4"></i>
-          <span>Abrir Navegación en Google Maps / Waze</span>
-        </a>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <a id="btnNavGpsTec" href="#" target="_blank" class="py-2.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="navigation" class="w-4 h-4"></i>
+            <span>Google Maps / Waze</span>
+          </a>
+          <button onclick="conmutarTabTecnico('mapa')" class="md:hidden py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="map" class="w-4 h-4 text-emerald-400"></i>
+            <span>Ver en Mapa Vial</span>
+          </button>
+        </div>
       </div>
 
       <!-- Estado Actual -->
@@ -818,31 +865,31 @@
         Estatus: Pendiente de Confirmación
       </div>
 
-      <!-- Botones del Técnico en Campo -->
-      <div class="space-y-2">
+      <!-- Botones del Técnico en Campo (Ajustados para fácil pulsación en Celular) -->
+      <div class="space-y-2 pt-1">
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="cambiarEstadoDesdeTecnico('Aceptado')" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/30">
+          <button onclick="cambiarEstadoDesdeTecnico('Aceptado')" class="py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/30">
             <i data-lucide="check-circle" class="w-4 h-4"></i>
             <span>Aceptar Servicio</span>
           </button>
-          <button onclick="cambiarEstadoDesdeTecnico('En Camino')" class="py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md shadow-indigo-600/30">
+          <button onclick="cambiarEstadoDesdeTecnico('En Camino')" class="py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30">
             <i data-lucide="truck" class="w-4 h-4"></i>
             <span>En Camino</span>
           </button>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="cambiarEstadoDesdeTecnico('Llegó')" class="py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md shadow-cyan-600/30">
+          <button onclick="cambiarEstadoDesdeTecnico('Llegó')" class="py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30">
             <i data-lucide="map-pin" class="w-4 h-4"></i>
             <span>Llegué al Sitio</span>
           </button>
-          <button onclick="cambiarEstadoDesdeTecnico('Finalizado')" class="py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md shadow-emerald-700/30">
+          <button onclick="cambiarEstadoDesdeTecnico('Finalizado')" class="py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/30">
             <i data-lucide="award" class="w-4 h-4"></i>
             <span>Finalizar Trabajo</span>
           </button>
         </div>
 
-        <button onclick="rechazarServicioTecnicoModal()" class="w-full py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 font-semibold rounded-xl transition flex items-center justify-center gap-1">
+        <button onclick="rechazarServicioTecnicoModal()" class="w-full py-2.5 bg-rose-600/20 hover:bg-rose-600 active:bg-rose-700 text-rose-400 hover:text-white border border-rose-500/30 font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm">
           <i data-lucide="x-circle" class="w-4 h-4"></i>
           <span>Rechazar / Cancelar con Motivo</span>
         </button>
@@ -850,16 +897,24 @@
 
     </div>
 
-    <!-- Mapa del Técnico -->
-    <div class="flex-1 relative bg-slate-950 flex flex-col min-h-[350px]">
-      <div class="bg-slate-900 border-b border-slate-800 px-3 py-1.5 flex items-center justify-between shrink-0 z-10">
-        <span class="text-xs font-bold text-slate-200 flex items-center gap-1">
-          <i data-lucide="map" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Ruta Carretera Asignada</span>
-        </span>
-        <button onclick="centrarMapaTecnico()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded">Centrar Ruta</button>
+    <!-- Mapa del Técnico (Responsive: Pantalla Completa en Móvil o Columna Derecha en Desktop) -->
+    <div id="tecMapContainer" class="hidden md:flex flex-1 relative bg-slate-950 flex-col min-h-[350px] h-[350px] md:h-full">
+      <div class="bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between shrink-0 z-10">
+        <div class="flex items-center gap-1.5">
+          <button onclick="conmutarTabTecnico('acciones')" class="md:hidden bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            <span>Volver</span>
+          </button>
+          <span class="text-xs font-bold text-slate-200 flex items-center gap-1">
+            <i data-lucide="map" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Ruta Carretera Asignada</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="centrarMapaTecnico()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2.5 py-1 rounded-lg border border-slate-700 font-medium">Centrar Ruta</button>
+        </div>
       </div>
-      <div id="mapaTecnicoLeaflet" class="flex-1 w-full h-full min-h-[380px] z-0"></div>
+      <div id="mapaTecnicoLeaflet" class="flex-1 w-full h-full min-h-[320px] z-0"></div>
     </div>
 
   </div>
@@ -1187,6 +1242,53 @@
     }
 
     /**
+     * PESTAÑAS MÓVILES DEL PORTAL TÉCNICO (ORDEN & ACCIONES VS MAPA VIAL)
+     */
+    function conmutarTabTecnico(tab) {
+      const btnAcciones = document.getElementById('tecTabBtnAcciones');
+      const btnMapa = document.getElementById('tecTabBtnMapa');
+      const panel = document.getElementById('tecPanelContenido');
+      const mapContainer = document.getElementById('tecMapContainer');
+
+      if (tab === 'acciones') {
+        if (btnAcciones) {
+          btnAcciones.className = "flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition";
+        }
+        if (btnMapa) {
+          btnMapa.className = "flex-1 py-2.5 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition";
+        }
+        if (panel) {
+          panel.classList.remove('hidden');
+        }
+        if (mapContainer) {
+          mapContainer.classList.add('hidden');
+          mapContainer.classList.remove('flex');
+        }
+      } else {
+        if (btnMapa) {
+          btnMapa.className = "flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition";
+        }
+        if (btnAcciones) {
+          btnAcciones.className = "flex-1 py-2.5 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition";
+        }
+        if (panel) {
+          panel.classList.add('hidden');
+        }
+        if (mapContainer) {
+          mapContainer.classList.remove('hidden');
+          mapContainer.classList.add('flex');
+        }
+        setTimeout(() => {
+          if (appState.leafletMapTecnico) {
+            appState.leafletMapTecnico.invalidateSize();
+            centrarMapaTecnico();
+          }
+        }, 200);
+      }
+      lucide.createIcons();
+    }
+
+    /**
      * CONMUTADOR ENTRE INTERFAZ ADMIN Y TÉCNICO
      */
     function conmutarInterfaz(interfaz) {
@@ -1207,6 +1309,7 @@
         btnTec.className = "px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-1 transition";
         btnAdmin.className = "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-bold flex items-center gap-1 transition";
         
+        conmutarTabTecnico('acciones');
         poblarSelectorTecnicoOrdenes();
         setTimeout(() => {
           if (appState.leafletMapTecnico) appState.leafletMapTecnico.invalidateSize();
