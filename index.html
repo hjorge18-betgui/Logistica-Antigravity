@@ -973,7 +973,7 @@
 
       if (!tec) {
         tec = {
-          id: `TEC-${100 + catalogoTecnicos.length + 1}`,
+          id: tecData.id || `TEC-${100 + catalogoTecnicos.length + 1}`,
           nombre: nombreTrim,
           telefono: tecData.telefono || '525500000000',
           direccion: tecData.direccion || 'Base Operativa',
@@ -981,8 +981,8 @@
           estado: tecData.estado || 'Yucatán',
           cp: tecData.cp || '97000',
           ranking: rankingVal,
-          activo: true,
-          motivoBaja: ""
+          activo: tecData.activo !== undefined ? tecData.activo : true,
+          motivoBaja: tecData.motivoBaja || ""
         };
         catalogoTecnicos.push(tec);
       } else {
@@ -992,27 +992,89 @@
         if (tecData.estado) tec.estado = tecData.estado;
         if (tecData.cp) tec.cp = tecData.cp;
         if (tecData.ranking) tec.ranking = tecData.ranking;
+        if (tecData.activo !== undefined) tec.activo = tecData.activo;
+        if (tecData.motivoBaja !== undefined) tec.motivoBaja = tecData.motivoBaja;
       }
+      guardarEnAlmacenamientoLocal();
       return tec;
     }
 
     /**
-     * CANAL DE SINCRONIZACIÓN (BROADCASTCHANNEL + MQTT CLOUD)
+     * PERSISTENCIA EN ALMACENAMIENTO LOCAL (OFFLINE FIRST / CROSS-TAB)
+     */
+    function guardarEnAlmacenamientoLocal() {
+      try {
+        localStorage.setItem('fsm_servicios_db', JSON.stringify(appState.servicios));
+        localStorage.setItem('fsm_catalogo_tecnicos_db', JSON.stringify(catalogoTecnicos));
+        localStorage.setItem('fsm_contador_folio', String(appState.contadorFolio));
+      } catch(e) {
+        console.warn('Error al guardar en localStorage:', e);
+      }
+    }
+
+    function cargarDesdeAlmacenamientoLocal() {
+      try {
+        const rawServicios = localStorage.getItem('fsm_servicios_db');
+        if (rawServicios) {
+          const parsed = JSON.parse(rawServicios);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            appState.servicios = parsed;
+          }
+        }
+        const rawCatalogo = localStorage.getItem('fsm_catalogo_tecnicos_db');
+        if (rawCatalogo) {
+          const parsedCat = JSON.parse(rawCatalogo);
+          if (Array.isArray(parsedCat) && parsedCat.length > 0) {
+            catalogoTecnicos = parsedCat;
+          }
+        }
+        const rawContador = localStorage.getItem('fsm_contador_folio');
+        if (rawContador) {
+          const val = parseInt(rawContador, 10);
+          if (!isNaN(val) && val > 0) appState.contadorFolio = val;
+        }
+      } catch(e) {
+        console.warn('Error al cargar de localStorage:', e);
+      }
+    }
+
+    // Sincronización instantánea entre pestañas del mismo navegador
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'fsm_servicios_db' || e.key === 'fsm_catalogo_tecnicos_db') {
+        cargarDesdeAlmacenamientoLocal();
+        actualizarKPIs();
+        renderizarTabla();
+        actualizarSelectorTecnicosForm();
+        poblarSelectorTecnicoOrdenes();
+        if (appState.modoActual === 'tecnico') {
+          actualizarVistaTecnicoActual();
+        }
+      }
+    });
+
+    /**
+     * CANAL DE SINCRONIZACIÓN (BROADCASTCHANNEL + MQTT CLOUD WEBSOCKET)
      */
     const dispatchSyncChannel = new BroadcastChannel('fsm_dispatch_channel');
     let mqttClient = null;
+    const mqttClientId = 'fsm_' + Math.random().toString(16).substring(2, 8);
 
-    // Inicializar conexión MQTT en la nube (HiveMQ WebSocket) para sincronización entre dispositivos
+    // Inicializar conexión MQTT en la nube (HiveMQ WebSocket) para sincronización en tiempo real entre dispositivos
     try {
       if (typeof mqtt !== 'undefined') {
         mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-          clientId: 'fsm_' + Math.random().toString(16).substring(2, 8),
+          clientId: mqttClientId,
           keepalive: 60
         });
 
         mqttClient.on('connect', () => {
           mqttClient.subscribe('betgui/fsm/sync/global');
           actualizarBadgeNube(true);
+          // Al conectar, solicitar el estado global a cualquier nodo activo en la nube
+          publicarSincronizacion({
+            type: 'SYNC_REQUEST',
+            clientId: mqttClientId
+          });
         });
 
         mqttClient.on('message', (topic, payload) => {
@@ -1033,23 +1095,79 @@
     };
 
     function publicarSincronizacion(objeto) {
-      // 1. Broadcast local
+      // 1. Broadcast local entre pestañas
       try { dispatchSyncChannel.postMessage(objeto); } catch(e){}
-      // 2. LocalStorage
+      // 2. LocalStorage último evento
       try { localStorage.setItem('fsm_last_event', JSON.stringify({ ...objeto, ts: Date.now() })); } catch(e){}
-      // 3. MQTT en la nube (GitHub Pages / Internet)
+      // 3. MQTT en la nube (Dispositivos móviles, GitHub Pages y remoto)
       if (mqttClient && mqttClient.connected) {
         try { mqttClient.publish('betgui/fsm/sync/global', JSON.stringify(objeto)); } catch(e){}
       }
     }
 
     function procesarMensajeSincronizado(action) {
-      const { type, data } = action;
-      if (type === 'STATUS_UPDATE') {
-        const serv = appState.servicios.find(s => s.id === data.id);
+      if (!action || !action.type) return;
+      const { type, data, clientId, targetId } = action;
+
+      if (type === 'SYNC_REQUEST') {
+        // Responder a clientes recién conectados con el inventario de órdenes si tenemos datos
+        if (clientId !== mqttClientId && appState.servicios.length > 0) {
+          publicarSincronizacion({
+            type: 'FULL_SYNC',
+            targetId: clientId,
+            senderId: mqttClientId,
+            data: {
+              servicios: appState.servicios,
+              catalogo: catalogoTecnicos,
+              contadorFolio: appState.contadorFolio
+            }
+          });
+        }
+      } else if (type === 'FULL_SYNC') {
+        // Si viene dirigido a un cliente específico y no somos nosotros, ignorar
+        if (targetId && targetId !== mqttClientId) return;
+
+        if (data && Array.isArray(data.servicios) && data.servicios.length > 0) {
+          data.servicios.forEach(remoto => {
+            const idx = appState.servicios.findIndex(local => local.id === remoto.id);
+            if (idx >= 0) {
+              if (remoto.estatusTecnico !== 'Pendiente' || appState.servicios[idx].estatusTecnico === 'Pendiente') {
+                appState.servicios[idx] = remoto;
+              }
+            } else {
+              appState.servicios.push(remoto);
+            }
+          });
+
+          if (Array.isArray(data.catalogo)) {
+            data.catalogo.forEach(c => registrarOActualizarTecnicoDesdeDatos(c));
+          }
+
+          if (data.contadorFolio && data.contadorFolio > appState.contadorFolio) {
+            appState.contadorFolio = data.contadorFolio;
+          }
+
+          guardarEnAlmacenamientoLocal();
+          actualizarKPIs();
+          renderizarTabla();
+          actualizarSelectorTecnicosForm();
+          poblarSelectorTecnicoOrdenes();
+          if (appState.modoActual === 'tecnico') {
+            actualizarVistaTecnicoActual();
+          }
+          mostrarToast(`☁️ Estado operativo sincronizado en vivo (${appState.servicios.length} órdenes).`);
+        }
+      } else if (type === 'STATUS_UPDATE') {
+        let serv = appState.servicios.find(s => s.id === data.id);
+        // Si el cliente no tenía la orden pero vino con el objeto completo, incorporarla
+        if (!serv && data.service) {
+          appState.servicios.unshift(data.service);
+          serv = data.service;
+        }
         if (serv) {
           serv.estatusTecnico = data.status;
           serv.motivoCancelacion = data.motivo || '';
+          guardarEnAlmacenamientoLocal();
           actualizarKPIs();
           renderizarTabla();
           if (appState.servicioActivoId === data.id) {
@@ -1061,15 +1179,49 @@
           mostrarToast(`🔔 Actualización en Vivo: Folio #${data.id} cambió a "${data.status}"`);
         }
       } else if (type === 'NEW_SERVICE') {
-        appState.servicios.unshift(data.service);
+        const existe = appState.servicios.find(s => s.id === data.service.id);
+        if (!existe) {
+          appState.servicios.unshift(data.service);
+          registrarOActualizarTecnicoDesdeDatos(data.service.tecnico);
+          guardarEnAlmacenamientoLocal();
+          actualizarKPIs();
+          renderizarTabla();
+          poblarSelectorTecnicoOrdenes();
+          mostrarToast(`🆕 Nueva orden recibida en vivo: Folio #${data.service.id}`);
+        }
+      } else if (type === 'MASS_IMPORT') {
+        if (data && data.services && Array.isArray(data.services)) {
+          data.services.forEach(remoto => {
+            const idx = appState.servicios.findIndex(local => local.id === remoto.id);
+            if (idx >= 0) {
+              appState.servicios[idx] = remoto;
+            } else {
+              appState.servicios.unshift(remoto);
+            }
+          });
+          if (Array.isArray(data.catalogo)) {
+            data.catalogo.forEach(c => registrarOActualizarTecnicoDesdeDatos(c));
+          }
+          guardarEnAlmacenamientoLocal();
+          actualizarKPIs();
+          renderizarTabla();
+          actualizarSelectorTecnicosForm();
+          poblarSelectorTecnicoOrdenes();
+          mostrarToast(`📥 Carga masiva sincronizada: ${data.count || data.services.length} órdenes.`);
+        }
+      } else if (type === 'DELETE_SERVICE') {
+        appState.servicios = appState.servicios.filter(s => s.id !== data.id);
+        guardarEnAlmacenamientoLocal();
         actualizarKPIs();
         renderizarTabla();
         poblarSelectorTecnicoOrdenes();
+        mostrarToast(`🗑️ Folio #${data.id} eliminado del sistema.`);
       } else if (type === 'TECNICO_BAJA') {
         const tec = catalogoTecnicos.find(t => t.id === data.tecId);
         if (tec) {
           tec.activo = false;
           tec.motivoBaja = data.motivo;
+          guardarEnAlmacenamientoLocal();
           actualizarSelectorTecnicosForm();
           renderizarListaGestionTecnicos();
           mostrarToast(`🔒 Aviso Gerencial: Técnico ${tec.nombre} ha sido DADO DE BAJA.`);
@@ -1081,9 +1233,13 @@
           if (data.ranking) serv.tecnico.ranking = data.ranking;
           serv.timestampAsignacion = Date.now();
           serv.segundosRestantes = 900;
+          guardarEnAlmacenamientoLocal();
           renderizarTabla();
           if (appState.servicioActivoId === data.id) {
             actualizarBarraTelemetria(serv);
+          }
+          if (appState.modoActual === 'tecnico') {
+            actualizarVistaTecnicoActual();
           }
           mostrarToast(`⚡ Folio #${data.id} reasignado de ${data.tecAnterior} a ${data.nuevoTec}`);
         }
@@ -1170,33 +1326,131 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
+      cargarDesdeAlmacenamientoLocal();
       poblarSelectoresEstados();
       actualizarSelectorTecnicosForm();
       inicializarMapaAdmin();
       inicializarMapaTecnico();
 
-      // Revisar si viene parámetro URL ?rol=tecnico
       const urlParams = new URLSearchParams(window.location.search);
       const rolParam = urlParams.get('rol');
+      const dataParam = urlParams.get('d');
+      const folioParam = urlParams.get('folio');
 
-      const sesionGuardada = localStorage.getItem('fsm_auth_session');
-      if (sesionGuardada) {
+      // Si viene orden empaquetada desde WhatsApp (?d=...)
+      if (dataParam) {
         try {
-          const user = JSON.parse(sesionGuardada);
-          establecerSesion(user);
-          if (rolParam === 'tecnico' || user.rol === 'tecnico') {
-            conmutarInterfaz('tecnico');
+          const rawData = decodeURIComponent(escape(atob(decodeURIComponent(dataParam))));
+          const p = JSON.parse(rawData);
+          if (p && p.id) {
+            let s = appState.servicios.find(item => item.id === p.id);
+            if (!s) {
+              s = {
+                id: p.id,
+                fecha: new Date().toISOString(),
+                horaInicio: p.hora || '09:00',
+                cliente: {
+                  nombre: p.cli.n,
+                  direccion: p.cli.d,
+                  ciudad: p.cli.c,
+                  estado: p.cli.e,
+                  cp: p.cli.cp || '97000',
+                  telefono: p.cli.t || '525585601910'
+                },
+                tecnico: {
+                  id: p.tec.id || 'TEC-101',
+                  nombre: p.tec.n,
+                  telefono: p.tec.t,
+                  direccion: p.tec.d || 'Base Operativa',
+                  ciudad: p.tec.c || 'Mérida',
+                  estado: p.tec.e || 'Yucatán',
+                  cp: p.tec.cp || '97000',
+                  ranking: p.tec.rk || '4.9'
+                },
+                sla: {
+                  nivel: p.sla || '4h',
+                  estatus: p.slaEst || 'Dentro de SLA',
+                  badgeClass: (p.slaEst === 'Incumplido') 
+                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' 
+                    : (p.slaEst === 'En Riesgo' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30')
+                },
+                ruta: {
+                  distanciaKm: p.km || 317.3,
+                  duracionMinutos: p.min || 240,
+                  dentroDeRadio: (p.min || 240) <= 60,
+                  costoEstimado: p.costo || 4780.85,
+                  origenCoords: p.o || { lat: 20.9674, lng: -89.5926 },
+                  destinoCoords: p.d || { lat: 21.1350, lng: -86.7580 },
+                  coordenadas: [[(p.o ? p.o.lat : 20.9674), (p.o ? p.o.lng : -89.5926)], [(p.d ? p.d.lat : 21.1350), (p.d ? p.d.lng : -86.7580)]]
+                },
+                estatusTecnico: p.st || 'Pendiente',
+                motivoCancelacion: '',
+                timestampAsignacion: p.ts || Date.now(),
+                segundosRestantes: 900
+              };
+              appState.servicios.unshift(s);
+              registrarOActualizarTecnicoDesdeDatos(s.tecnico);
+              guardarEnAlmacenamientoLocal();
+
+              // Resolver en segundo plano la geometría vial real OSRM (carreteras reales)
+              if (p.o && p.d) {
+                resolverRutaVialReal(p.o.lat, p.o.lng, p.d.lat, p.d.lng).then(r => {
+                  if (r && r.coordenadas) {
+                    s.ruta.coordenadas = r.coordenadas;
+                    guardarEnAlmacenamientoLocal();
+                    if (appState.modoActual === 'tecnico' && appState.servicioActivoId === s.id) {
+                      renderizarRutaEnMapaTecnico(s);
+                    }
+                  }
+                }).catch(() => {});
+              }
+            } else {
+              registrarOActualizarTecnicoDesdeDatos(p.tec);
+            }
           }
-        } catch(e){}
-      } else if (rolParam === 'tecnico') {
-        llenarLogin('tecnico@betgui.com', 'Tecnico2026!');
+        } catch(err) {
+          console.warn('No se pudo decodificar payload de WhatsApp:', err);
+        }
+      }
+
+      // Autenticación de Técnico cuando accede desde enlace de WhatsApp
+      if (rolParam === 'tecnico') {
+        const userTecnico = {
+          email: 'tecnico@betgui.com',
+          rol: 'tecnico',
+          nombre: 'Ismael Jácome Chagala (Técnico)',
+          base: 'Mérida, Yucatán'
+        };
+        localStorage.setItem('fsm_auth_session', JSON.stringify(userTecnico));
+        establecerSesion(userTecnico);
+        conmutarInterfaz('tecnico');
+      } else {
+        const sesionGuardada = localStorage.getItem('fsm_auth_session');
+        if (sesionGuardada) {
+          try {
+            const user = JSON.parse(sesionGuardada);
+            establecerSesion(user);
+            if (user.rol === 'tecnico') {
+              conmutarInterfaz('tecnico');
+            }
+          } catch(e){}
+        }
       }
 
       const d = new Date();
-      document.getElementById('tecHoraInicio').value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const elHora = document.getElementById('tecHoraInicio');
+      if (elHora) {
+        elHora.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      }
 
       actualizarKPIs();
       renderizarTabla();
+      poblarSelectorTecnicoOrdenes(folioParam);
+      if (folioParam) {
+        seleccionarOrdenTecnico(folioParam);
+      } else if (appState.servicios.length > 0 && appState.modoActual === 'admin') {
+        seleccionarServicio(appState.servicios[0].id);
+      }
       iniciarMonitoreoTiempoLimiteTecnicos();
     });
 
@@ -1568,6 +1822,15 @@
       renderizarTabla();
       if (appState.servicios.length > 0) seleccionarServicio(appState.servicios[0].id);
       poblarSelectorTecnicoOrdenes();
+      guardarEnAlmacenamientoLocal();
+      publicarSincronizacion({
+        type: 'MASS_IMPORT',
+        data: {
+          services: appState.servicios,
+          catalogo: catalogoTecnicos,
+          count: appState.servicios.length
+        }
+      });
 
       setTimeout(() => {
         if (appState.leafletMapAdmin) appState.leafletMapAdmin.invalidateSize();
@@ -1604,6 +1867,7 @@
         return;
       }
 
+      // Validar si el técnico seleccionado está dado de baja
       if (tecSelectVal && tecSelectVal !== 'custom') {
         const tecObj = catalogoTecnicos.find(t => t.id === tecSelectVal);
         if (tecObj && !tecObj.activo) {
@@ -1612,8 +1876,10 @@
         }
       }
 
-      const oBase = CATALOGO_MEXICO[tecEstado] || { lat: 20.9674, lng: -89.5926 };
-      const dBase = CATALOGO_MEXICO[cliEstado] || { lat: 21.1350, lng: -86.7580 };
+      mostrarToast('🚗 Conectando a Servidor OSRM Vial de México...');
+
+      const oBase = CATALOGO_MEXICO[tecEstado] || CATALOGO_MEXICO['Yucatán'];
+      const dBase = CATALOGO_MEXICO[cliEstado] || CATALOGO_MEXICO['Quintana Roo'];
 
       const oCoords = { lat: oBase.lat + (Math.random() - 0.5) * 0.04, lng: oBase.lng + (Math.random() - 0.5) * 0.04 };
       const dCoords = { lat: dBase.lat + (Math.random() - 0.5) * 0.04, lng: dBase.lng + (Math.random() - 0.5) * 0.04 };
@@ -1660,6 +1926,7 @@
       };
 
       appState.servicios.unshift(nuevoServicio);
+      guardarEnAlmacenamientoLocal();
       actualizarKPIs();
       renderizarTabla();
       seleccionarServicio(nuevoServicio.id);
@@ -1901,6 +2168,7 @@
       s.estatusTecnico = 'Pendiente';
       s.motivoCancelacion = '';
 
+      guardarEnAlmacenamientoLocal();
       actualizarKPIs();
       renderizarTabla();
       seleccionarServicio(s.id);
@@ -1933,7 +2201,8 @@
     }
 
     function despacharWhatsApp(id) {
-      const s = appState.servicios.find(item => item.id === id);
+      let s = appState.servicios.find(item => item.id === id);
+      if (!s && appState.servicios.length > 0) s = appState.servicios[0];
       if (!s) {
         alert('Servicio no encontrado.');
         return;
@@ -1941,7 +2210,50 @@
 
       const tel = (s.tecnico.telefono || '525585601910').replace(/\D/g, '');
       const baseUrl = window.location.href.split('#')[0].split('?')[0];
-      const linkTecnico = `${baseUrl}?rol=tecnico&folio=${s.id}`;
+
+      // Payload autosuficiente compacto para garantizar carga instantánea en el celular del técnico
+      const compactPayload = {
+        id: s.id,
+        hora: s.horaInicio || '09:00',
+        cli: {
+          n: s.cliente.nombre,
+          d: s.cliente.direccion,
+          c: s.cliente.ciudad,
+          e: s.cliente.estado,
+          cp: s.cliente.cp,
+          t: s.cliente.telefono
+        },
+        tec: {
+          id: s.tecnico.id,
+          n: s.tecnico.nombre,
+          t: s.tecnico.telefono,
+          d: s.tecnico.direccion,
+          c: s.tecnico.ciudad,
+          e: s.tecnico.estado,
+          cp: s.tecnico.cp,
+          rk: s.tecnico.ranking
+        },
+        sla: s.sla.nivel,
+        slaEst: s.sla.estatus,
+        km: s.ruta.distanciaKm,
+        min: s.ruta.duracionMinutos,
+        costo: s.ruta.costoEstimado,
+        o: s.ruta.origenCoords,
+        d: s.ruta.destinoCoords,
+        st: s.estatusTecnico,
+        ts: s.timestampAsignacion || Date.now()
+      };
+
+      let encodedData = '';
+      try {
+        encodedData = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
+      } catch(e) {
+        console.warn('Error al codificar payload de WhatsApp:', e);
+      }
+
+      const linkTecnico = encodedData
+        ? `${baseUrl}?rol=tecnico&folio=${encodeURIComponent(s.id)}&d=${encodedData}`
+        : `${baseUrl}?rol=tecnico&folio=${encodeURIComponent(s.id)}`;
 
       const rankingStr = s.tecnico.ranking ? `⭐ ${s.tecnico.ranking}` : '⭐ 4.9';
 
@@ -1973,6 +2285,7 @@ ${linkTecnico}`;
         s.timestampAsignacion = Date.now();
         s.segundosRestantes = 900;
       }
+      guardarEnAlmacenamientoLocal();
 
       mostrarToast(`📲 WhatsApp despachado a ${s.tecnico.nombre} (${tel}) para Folio #${s.id}`);
     }
@@ -2308,6 +2621,7 @@ ${linkTecnico}`;
       appState.tecnicoADarDeBaja.activo = false;
       appState.tecnicoADarDeBaja.motivoBaja = mot;
 
+      guardarEnAlmacenamientoLocal();
       cerrarModalBajaGerente();
       actualizarSelectorTecnicosForm();
       
@@ -2325,10 +2639,26 @@ ${linkTecnico}`;
      */
     function poblarSelectorTecnicoOrdenes(folioPredefinido) {
       const select = document.getElementById('tecOrdenSelect');
+      if (!select) return;
       select.innerHTML = '';
 
       if (appState.servicios.length === 0) {
         select.innerHTML = '<option value="">Sin servicios asignados</option>';
+        actualizarBannerTecnico('Sin Asignaciones', '');
+        const elFolio = document.getElementById('tecCardFolio');
+        const elCli = document.getElementById('tecCardCliente');
+        const elDir = document.getElementById('tecCardDireccion');
+        const elCd = document.getElementById('tecCardCiudad');
+        const elDist = document.getElementById('tecCardDistancia');
+        const elTiempo = document.getElementById('tecCardTiempo');
+        const elSla = document.getElementById('tecCardSlaBadge');
+        if (elFolio) elFolio.innerText = '---';
+        if (elCli) elCli.innerText = 'Sin órdenes asignadas';
+        if (elDir) elDir.innerText = 'En espera de asignación desde Despacho Central';
+        if (elCd) elCd.innerText = '';
+        if (elDist) elDist.innerText = '0 km';
+        if (elTiempo) elTiempo.innerText = '0 min';
+        if (elSla) elSla.innerText = 'SLA N/A';
         return;
       }
 
@@ -2348,20 +2678,34 @@ ${linkTecnico}`;
         select.appendChild(opt);
       });
 
-      seleccionarOrdenTecnico(seleccionado || select.value || appState.servicios[0].id);
+      const folioElegido = seleccionado || select.value || appState.servicios[0].id;
+      select.value = folioElegido;
+      seleccionarOrdenTecnico(folioElegido);
     }
 
     function seleccionarOrdenTecnico(id) {
-      const s = appState.servicios.find(item => item.id === id);
+      let s = appState.servicios.find(item => item.id === id);
+      if (!s && appState.servicios.length > 0) s = appState.servicios[0];
       if (!s) return;
 
-      document.getElementById('tecCardFolio').innerText = `#${s.id}`;
-      document.getElementById('tecCardCliente').innerText = s.cliente.nombre;
-      document.getElementById('tecCardDireccion').innerText = s.cliente.direccion;
-      document.getElementById('tecCardCiudad').innerText = `${s.cliente.ciudad}, ${s.cliente.estado}`;
-      document.getElementById('tecCardDistancia').innerText = `${s.ruta.distanciaKm} km`;
-      document.getElementById('tecCardTiempo').innerText = `${s.ruta.duracionMinutos} min`;
-      document.getElementById('tecCardSlaBadge').innerText = `SLA ${s.sla.nivel}: ${s.sla.estatus}`;
+      appState.servicioActivoId = s.id;
+      const select = document.getElementById('tecOrdenSelect');
+      if (select && select.value !== s.id) select.value = s.id;
+
+      const elFolio = document.getElementById('tecCardFolio');
+      if (elFolio) elFolio.innerText = `#${s.id}`;
+      const elCli = document.getElementById('tecCardCliente');
+      if (elCli) elCli.innerText = s.cliente.nombre;
+      const elDir = document.getElementById('tecCardDireccion');
+      if (elDir) elDir.innerText = s.cliente.direccion;
+      const elCd = document.getElementById('tecCardCiudad');
+      if (elCd) elCd.innerText = `${s.cliente.ciudad}, ${s.cliente.estado}`;
+      const elDist = document.getElementById('tecCardDistancia');
+      if (elDist) elDist.innerText = `${s.ruta.distanciaKm} km`;
+      const elTiempo = document.getElementById('tecCardTiempo');
+      if (elTiempo) elTiempo.innerText = `${s.ruta.duracionMinutos} min`;
+      const elSla = document.getElementById('tecCardSlaBadge');
+      if (elSla) elSla.innerText = `SLA ${s.sla.nivel}: ${s.sla.estatus}`;
 
       const elNombreTec = document.getElementById('tecCardNombreTec');
       const elRanking = document.getElementById('tecCardRanking');
@@ -2369,7 +2713,10 @@ ${linkTecnico}`;
       if (elRanking) elRanking.innerText = `⭐ ${s.tecnico.ranking || '4.9'}`;
 
       const d = s.ruta.destinoCoords;
-      document.getElementById('btnNavGpsTec').href = `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
+      const btnGps = document.getElementById('btnNavGpsTec');
+      if (btnGps && d) {
+        btnGps.href = `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
+      }
 
       actualizarBannerTecnico(s.estatusTecnico, s.motivoCancelacion);
       renderizarRutaEnMapaTecnico(s);
@@ -2377,6 +2724,7 @@ ${linkTecnico}`;
 
     function actualizarBannerTecnico(estatus, motivo) {
       const banner = document.getElementById('tecBannerEstado');
+      if (!banner) return;
       if (estatus === 'Aceptado') {
         banner.className = "p-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-center font-bold text-xs";
         banner.innerHTML = "✅ Servicio Aceptado por el Técnico";
@@ -2400,42 +2748,55 @@ ${linkTecnico}`;
 
     function cambiarEstadoDesdeTecnico(nuevoEstado) {
       const select = document.getElementById('tecOrdenSelect');
-      const id = select.value;
+      let id = select ? select.value : null;
+      if (!id && appState.servicioActivoId) id = appState.servicioActivoId;
+      if (!id && appState.servicios.length > 0) id = appState.servicios[0].id;
+
       const s = appState.servicios.find(item => item.id === id);
-      if (!s) return;
+      if (!s) {
+        alert('No hay ninguna orden de servicio seleccionada para actualizar.');
+        return;
+      }
 
       s.estatusTecnico = nuevoEstado;
       s.motivoCancelacion = '';
 
+      guardarEnAlmacenamientoLocal();
       actualizarBannerTecnico(nuevoEstado, '');
       actualizarKPIs();
       renderizarTabla();
-      poblarSelectorTecnicoOrdenes();
-      select.value = id;
+      poblarSelectorTecnicoOrdenes(s.id);
 
       publicarSincronizacion({
         type: 'STATUS_UPDATE',
-        data: { id: s.id, status: nuevoEstado, motivo: '' }
+        data: { id: s.id, status: nuevoEstado, motivo: '', service: s }
       });
 
-      mostrarToast(`✅ Estado actualizado a "${nuevoEstado}" y transmitido en vivo.`);
+      mostrarToast(`✅ Estado actualizado a "${nuevoEstado}" y transmitido a Despacho Central.`);
     }
 
     function rechazarServicioTecnicoModal() {
       const select = document.getElementById('tecOrdenSelect');
-      const id = select.value;
-      const s = appState.servicios.find(item => item.id === id);
-      if (!s) return;
+      let id = select ? select.value : null;
+      if (!id && appState.servicioActivoId) id = appState.servicioActivoId;
+      if (!id && appState.servicios.length > 0) id = appState.servicios[0].id;
 
-      const mot = prompt('Indica el motivo obligatorio de rechazo / cancelación del servicio:', 'Tráfico excesivo / Fuera de radio / Falta de equipo');
+      const s = appState.servicios.find(item => item.id === id);
+      if (!s) {
+        alert('No hay ninguna orden de servicio seleccionada.');
+        return;
+      }
+
+      const mot = prompt(`Indica el motivo obligatorio de rechazo / cancelación de la orden #${s.id}:`, 'Tráfico vial excesivo / Fuera de radio de cobertura / Falta de herramienta');
       if (mot === null || mot.trim() === '') {
-        alert('Debes indicar un motivo de rechazo.');
+        alert('Debes indicar un motivo de rechazo para proceder.');
         return;
       }
 
       s.estatusTecnico = 'Cancelado';
       s.motivoCancelacion = mot.trim();
 
+      guardarEnAlmacenamientoLocal();
       actualizarBannerTecnico('Cancelado', s.motivoCancelacion);
       actualizarKPIs();
       renderizarTabla();
@@ -2443,10 +2804,10 @@ ${linkTecnico}`;
 
       publicarSincronizacion({
         type: 'STATUS_UPDATE',
-        data: { id: s.id, status: 'Cancelado', motivo: s.motivoCancelacion }
+        data: { id: s.id, status: 'Cancelado', motivo: s.motivoCancelacion, service: s }
       });
 
-      mostrarToast(`🔴 Servicio #${s.id} rechazado con motivo: ${s.motivoCancelacion}`);
+      mostrarToast(`🔴 Servicio #${s.id} cancelado con motivo: ${s.motivoCancelacion}`);
 
       if (confirm(`El servicio #${s.id} fue rechazado por ${s.tecnico.nombre}.\n¿Deseas reasignarlo automáticamente al siguiente técnico más cercano que cumpla con el SLA?`)) {
         ejecutarReasignacionPorTimeout(s.id);
@@ -2461,6 +2822,7 @@ ${linkTecnico}`;
 
       const o = s.ruta.origenCoords;
       const d = s.ruta.destinoCoords;
+      if (!o || !d) return;
 
       const tecIcon = L.divIcon({
         className: 'custom-leaflet-marker bg-emerald-500 border-2 border-white',
@@ -2474,18 +2836,26 @@ ${linkTecnico}`;
         iconSize: [28, 28], iconAnchor: [14, 14]
       });
 
-      appState.markersGroupTecnico.addLayer(L.marker([o.lat, o.lng], { icon: tecIcon }).bindPopup('Origen'));
-      appState.markersGroupTecnico.addLayer(L.marker([d.lat, d.lng], { icon: cliIcon }).bindPopup(`Cliente: ${s.cliente.nombre}`));
+      appState.markersGroupTecnico.addLayer(L.marker([o.lat, o.lng], { icon: tecIcon }).bindPopup(`🔧 Origen: ${s.tecnico.nombre}`));
+      appState.markersGroupTecnico.addLayer(L.marker([d.lat, d.lng], { icon: cliIcon }).bindPopup(`📍 Cliente: ${s.cliente.nombre}`));
 
-      const coords = s.ruta.coordenadas || [[o.lat, o.lng], [d.lat, d.lng]];
+      const coords = (s.ruta.coordenadas && s.ruta.coordenadas.length > 0)
+        ? s.ruta.coordenadas
+        : [[o.lat, o.lng], [d.lat, d.lng]];
+
       appState.routePolylineTec = L.polyline(coords, { color: '#4f46e5', weight: 4.5, opacity: 1 }).addTo(appState.leafletMapTecnico);
 
-      appState.leafletMapTecnico.fitBounds(L.latLngBounds(coords), { padding: [30, 30] });
+      try {
+        appState.leafletMapTecnico.fitBounds(L.latLngBounds(coords), { padding: [30, 30] });
+      } catch(e) {}
     }
 
     function centrarMapaTecnico() {
       const select = document.getElementById('tecOrdenSelect');
-      const s = appState.servicios.find(item => item.id === select.value);
+      let id = select ? select.value : null;
+      if (!id && appState.servicioActivoId) id = appState.servicioActivoId;
+      if (!id && appState.servicios.length > 0) id = appState.servicios[0].id;
+      const s = appState.servicios.find(item => item.id === id);
       if (s) renderizarRutaEnMapaTecnico(s);
     }
 
@@ -2611,9 +2981,11 @@ ${linkTecnico}`;
 
     function actualizarVistaTecnicoActual() {
       const select = document.getElementById('tecOrdenSelect');
-      if (select && select.value) {
-        seleccionarOrdenTecnico(select.value);
-      } else if (appState.servicios.length > 0) {
+      let id = (select && select.value) ? select.value : appState.servicioActivoId;
+      if (!id && appState.servicios.length > 0) id = appState.servicios[0].id;
+      if (id) {
+        seleccionarOrdenTecnico(id);
+      } else {
         poblarSelectorTecnicoOrdenes();
       }
     }
@@ -2751,8 +3123,16 @@ ${linkTecnico}`;
           renderizarTabla();
           if (appState.servicios.length > 0) seleccionarServicio(appState.servicios[0].id);
           poblarSelectorTecnicoOrdenes();
+          guardarEnAlmacenamientoLocal();
 
-          publicarSincronizacion({ type: 'MASS_IMPORT', data: { count: importados } });
+          publicarSincronizacion({
+            type: 'MASS_IMPORT',
+            data: {
+              services: appState.servicios,
+              catalogo: catalogoTecnicos,
+              count: importados
+            }
+          });
 
           mostrarToast(`🎉 Se importaron con éxito ${importados} servicios desde Excel.`);
           alert(`✅ Carga Masiva Exitosa:\nSe han importado ${importados} órdenes de servicio.\nSe procesaron los datos del Técnico (Dirección, CP, Teléfono Celular, Ranking ⭐) y Cliente.`);
@@ -2771,9 +3151,14 @@ ${linkTecnico}`;
     function eliminarServicio(id) {
       if (confirm(`¿Eliminar servicio ${id}?`)) {
         appState.servicios = appState.servicios.filter(s => s.id !== id);
+        guardarEnAlmacenamientoLocal();
         actualizarKPIs();
         renderizarTabla();
         poblarSelectorTecnicoOrdenes();
+        publicarSincronizacion({
+          type: 'DELETE_SERVICE',
+          data: { id }
+        });
       }
     }
 
