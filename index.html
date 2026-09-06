@@ -137,38 +137,38 @@
         <p class="text-xs text-slate-400">Plataforma Todo-en-Uno: Administrador & Técnico Unificado</p>
       </div>
 
-      <!-- Credenciales Oficiales de 1-Click -->
+      <!-- Selección Rápida de Perfil de Acceso -->
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
         <p class="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
-          <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Selecciona un Perfil para Ingresar con 1 Clic:</span>
+          <i data-lucide="shield" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>Selecciona el Perfil para Iniciar Sesión:</span>
         </p>
         <div class="grid grid-cols-3 gap-2 text-[10px]">
           <button 
             type="button" 
-            onclick="llenarLogin('admin@betgui.com', 'Admin2026!')" 
-            class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition">
+            onclick="seleccionarPerfilLogin('admin')" 
+            class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-indigo-500">
             <span class="font-bold text-indigo-400 block">👑 Administrador</span>
             <span class="text-slate-400 truncate block">admin@betgui.com</span>
-            <span class="text-slate-500 block">Admin2026!</span>
+            <span class="text-emerald-400 text-[9px] block">Despacho Central</span>
           </button>
 
           <button 
             type="button" 
-            onclick="llenarLogin('tecnico@betgui.com', 'Tecnico2026!')" 
-            class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition">
+            onclick="seleccionarPerfilLogin('tecnico')" 
+            class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-emerald-500">
             <span class="font-bold text-emerald-400 block">🔧 Técnico Campo</span>
             <span class="text-slate-400 truncate block">tecnico@betgui.com</span>
-            <span class="text-slate-500 block">Tecnico2026!</span>
+            <span class="text-indigo-400 text-[9px] block">Operación Móvil</span>
           </button>
 
           <button 
             type="button" 
-            onclick="llenarLogin('gerente@betgui.com', 'Gerente2026!')" 
-            class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition">
-            <span class="font-bold text-amber-400 block">🔒 Gerente (Bajas)</span>
+            onclick="seleccionarPerfilLogin('gerente')" 
+            class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-amber-500">
+            <span class="font-bold text-amber-400 block">🔒 Gerente</span>
             <span class="text-slate-400 truncate block">gerente@betgui.com</span>
-            <span class="text-slate-500 block">Gerente2026!</span>
+            <span class="text-amber-400 text-[9px] block">Candado y Bajas</span>
           </button>
         </div>
       </div>
@@ -195,9 +195,10 @@
             <input 
               type="password" 
               id="loginPassword" 
-              value="Admin2026!" 
+              value="" 
+              placeholder="Ingresa tu contraseña"
               required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
             />
           </div>
         </div>
@@ -301,8 +302,8 @@
           <input 
             type="password" 
             id="gerentePassAuth" 
-            value="Gerente2026!" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+            placeholder="••••••••" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono"
           />
         </div>
 
@@ -674,6 +675,10 @@
             <i data-lucide="list" class="w-3.5 h-3.5"></i>
             <span>Solo Tabla</span>
           </button>
+          <button id="viewBtnRanking" onclick="cambiarModoVista('ranking')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition" title="Dashboard de Ranking y Desempeño">
+            <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>⭐ Ranking Técnicos</span>
+          </button>
         </div>
 
         <div class="flex items-center gap-1 overflow-x-auto text-xs">
@@ -765,6 +770,122 @@
 
         </div>
 
+        <!-- PANEL DE RANKING Y DESEMPEÑO DE TÉCNICOS (ADMINISTRADOR) -->
+        <div id="rankingSectionContainer" class="hidden flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4">
+          <!-- Cabecera de Sección -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3 shrink-0">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <i data-lucide="award" class="w-4 h-4"></i>
+                </span>
+                <span>⭐ Matriz de Ranking & Desempeño Operativo de Técnicos</span>
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Evaluación continua en tiempo real: premiación por aceptación puntual (&lt;15 min) y penalización por cancelación o rechazo.
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 font-medium flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Sincronización Nube Activa</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Tarjetas KPI de Ranking -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Total Técnicos</span>
+                <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
+              </div>
+              <p id="kpiTotalTecnicosRank" class="text-2xl font-black text-white mt-1">0</p>
+              <span class="text-[10px] text-slate-500">Plantilla registrada</span>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-emerald-400">🟢 Bueno (⭐ ≥ 4.5)</span>
+                <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i>
+              </div>
+              <p id="kpiTecnicosBuenoRank" class="text-2xl font-black text-emerald-400 mt-1">0</p>
+              <span class="text-[10px] text-slate-400">Prioridad despacho</span>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-amber-500/30 bg-amber-950/10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-amber-400">🟡 Regular (⭐ 3.5 - 4.4)</span>
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+              </div>
+              <p id="kpiTecnicosRegularRank" class="text-2xl font-black text-amber-400 mt-1">0</p>
+              <span class="text-[10px] text-slate-400">Nivel de advertencia</span>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-rose-500/30 bg-rose-950/10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-rose-400">🔴 Malo (⭐ &lt; 3.5)</span>
+                <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-400"></i>
+              </div>
+              <p id="kpiTecnicosMaloRank" class="text-2xl font-black text-rose-400 mt-1">0</p>
+              <span class="text-[10px] text-slate-400">Riesgo de suspensión</span>
+            </div>
+          </div>
+
+          <!-- Tabla Detallada de Técnicos -->
+          <div class="flex-1 min-h-[300px] overflow-hidden flex flex-col bg-slate-950 rounded-xl border border-slate-800 shadow-inner">
+            <div class="bg-slate-950/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <span class="text-xs font-bold text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                <i data-lucide="table" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Tabla de Calificación & Rendimiento</span>
+              </span>
+              <span class="text-[11px] text-slate-400">Actualización en tiempo real vía MQTT</span>
+            </div>
+
+            <div class="flex-1 overflow-auto">
+              <table class="w-full text-left text-xs border-collapse min-w-[760px]">
+                <thead class="bg-slate-900 text-slate-400 font-semibold sticky top-0 z-10 border-b border-slate-800 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th class="p-3">ID / Técnico</th>
+                    <th class="p-3">Base / Ubicación</th>
+                    <th class="p-3">Contacto</th>
+                    <th class="p-3 text-center">Aceptados</th>
+                    <th class="p-3 text-center">Cancelados</th>
+                    <th class="p-3 text-center">Tasa Aceptación</th>
+                    <th class="p-3 text-center">Ranking (Estrellas)</th>
+                    <th class="p-3 text-center">Categoría Oficial</th>
+                    <th class="p-3 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaRankingAdminBody" class="divide-y divide-slate-800/80 text-slate-300">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tarjeta Informativa de Reglas de Calificación -->
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 text-xs space-y-1.5 text-slate-400 shrink-0">
+            <p class="font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i>
+              <span>Criterios de Puntuación Automática para la Venta Comercial:</span>
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-[11px]">
+              <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+                <p class="text-emerald-400 font-semibold">🟢 Categoría Bueno (≥ 4.5 ⭐)</p>
+                <p class="text-slate-400">Prioridad #1 en SLA y despacho automático. Cada servicio aceptado dentro de los 15 minutos suma <strong>+0.1⭐</strong> (máx 5.0).</p>
+              </div>
+              <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+                <p class="text-amber-400 font-semibold">🟡 Categoría Regular (3.5 - 4.4 ⭐)</p>
+                <p class="text-slate-400">Técnico con retrasos o cancelaciones aisladas. Asignación secundaria de servicios.</p>
+              </div>
+              <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+                <p class="text-rose-400 font-semibold">🔴 Categoría Malo (&lt; 3.5 ⭐)</p>
+                <p class="text-slate-400">Cada cancelación penaliza <strong>-0.4⭐</strong>. Requiere autorización o baja supervisada por Gerente.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -777,25 +898,44 @@
   <div id="tecnicoInterfaceContainer" class="hidden flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-slate-950 min-h-0 w-full">
     
     <!-- Barra de Pestañas Móviles (Solo visible en Celulares Android / iOS < md) -->
-    <div class="md:hidden bg-slate-900/95 border-b border-slate-800 p-2 flex items-center gap-2 shrink-0 z-20 shadow-md">
+    <div class="md:hidden bg-slate-900/95 border-b border-slate-800 p-2 flex items-center gap-1.5 shrink-0 z-20 shadow-md">
       <button 
         id="tecTabBtnAcciones" 
         onclick="conmutarTabTecnico('acciones')" 
-        class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition">
-        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
-        <span>1. Orden & Acciones</span>
+        class="flex-1 py-2.5 px-2 rounded-xl bg-emerald-600 text-white font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow transition">
+        <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+        <span>1. Orden</span>
       </button>
       <button 
         id="tecTabBtnMapa" 
         onclick="conmutarTabTecnico('mapa')" 
-        class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition">
-        <i data-lucide="map" class="w-4 h-4"></i>
-        <span>2. Ver Mapa Vial</span>
+        class="flex-1 py-2.5 px-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition">
+        <i data-lucide="map" class="w-3.5 h-3.5"></i>
+        <span>2. Mapa</span>
+      </button>
+      <button 
+        id="tecTabBtnRanking" 
+        onclick="conmutarTabTecnico('ranking')" 
+        class="flex-1 py-2.5 px-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition">
+        <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span>3. Mi Ranking</span>
       </button>
     </div>
 
     <!-- Panel de Órdenes y Botones de Acción del Técnico -->
     <div id="tecPanelContenido" class="w-full md:w-[440px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto p-3.5 sm:p-4 space-y-3 text-xs pb-24 md:pb-6">
+      
+      <!-- Selector de Sub-Pestaña para Técnico en Desktop -->
+      <div class="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+        <button id="tecDeskBtnAcciones" onclick="conmutarTabTecnico('acciones')" class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+          <span>Servicio Asignado</span>
+        </button>
+        <button id="tecDeskBtnRanking" onclick="conmutarTabTecnico('ranking')" class="flex-1 py-1.5 px-3 rounded-lg text-slate-400 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Mi Ranking & Desempeño</span>
+        </button>
+      </div>
       
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between shadow-sm">
         <div class="flex items-center gap-2.5">
@@ -897,6 +1037,97 @@
 
     </div>
 
+    <!-- Panel de Ranking y Desempeño Exclusivo del Técnico -->
+    <div id="tecPanelRanking" class="hidden w-full md:w-[440px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 text-xs pb-24 md:pb-6">
+      
+      <!-- Sub-Pestaña Desktop también presente aquí para alternar -->
+      <div class="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+        <button onclick="conmutarTabTecnico('acciones')" class="flex-1 py-1.5 px-3 rounded-lg text-slate-400 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+          <span>Servicio Asignado</span>
+        </button>
+        <button class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Mi Ranking & Desempeño</span>
+        </button>
+      </div>
+
+      <!-- Cabecera del Técnico -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 shadow-sm text-center relative overflow-hidden shrink-0">
+        <div class="w-14 h-14 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center mx-auto mb-2 text-xl font-black">
+          <i data-lucide="user-check" class="w-7 h-7"></i>
+        </div>
+        <h3 id="tecRankNombre" class="font-bold text-base text-white">Ismael Jácome Chagala</h3>
+        <p id="tecRankId" class="text-[11px] font-mono text-indigo-400 mt-0.5">ID: #TEC-101 • Base Operativa Mérida</p>
+        
+        <div class="mt-3 flex items-center justify-center gap-2">
+          <span id="tecRankBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            🟢 Bueno
+          </span>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+            ⭐ <span id="tecRankPuntaje">4.9</span> / 5.0
+          </span>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Métricas de Cumplimiento -->
+      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5 shadow-sm shrink-0">
+        <h4 class="text-slate-300 font-bold text-xs flex items-center gap-1.5 border-b border-slate-800 pb-1.5">
+          <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-400"></i>
+          <span>Métricas de Desempeño en Campo</span>
+        </h4>
+
+        <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+          <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">Aceptados</span>
+            <span id="tecRankAceptados" class="text-base font-black text-emerald-400">0</span>
+          </div>
+          <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">Cancelados</span>
+            <span id="tecRankCancelados" class="text-base font-black text-rose-400">0</span>
+          </div>
+          <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">Efectividad</span>
+            <span id="tecRankTasa" class="text-base font-black text-indigo-400">100%</span>
+          </div>
+        </div>
+
+        <!-- Consejo / Estado -->
+        <div id="tecRankConsejo" class="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-[11px] leading-relaxed">
+          ¡Excelente trabajo! Mantén tu respuesta dentro de los 15 minutos para seguir conservando la categoría 🟢 Bueno y prioridad en asignación de rutas.
+        </div>
+      </div>
+
+      <!-- Guía de Categorías para el Técnico -->
+      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 shadow-sm text-[11px] shrink-0">
+        <h4 class="text-slate-300 font-bold text-xs flex items-center gap-1.5">
+          <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+          <span>¿Cómo se calcula tu Ranking?</span>
+        </h4>
+        <div class="space-y-1.5 text-slate-400">
+          <p class="flex items-start gap-1.5">
+            <span class="text-emerald-400 font-bold">✓</span>
+            <span><strong>+0.1 Estrellas:</strong> Por cada servicio que confirmas en "Aceptar Servicio" dentro de los 15 minutos de tolerancia.</span>
+          </p>
+          <p class="flex items-start gap-1.5">
+            <span class="text-rose-400 font-bold">✗</span>
+            <span><strong>-0.4 Estrellas:</strong> Por cada servicio rechazado o cancelado con motivo.</span>
+          </p>
+          <div class="p-2 bg-slate-900 rounded-lg border border-slate-800 mt-2 space-y-1 text-[10px]">
+            <p>🟢 <strong>Bueno (≥ 4.5):</strong> Prioridad alta en asignación y bono operativo.</p>
+            <p>🟡 <strong>Regular (3.5 - 4.4):</strong> Nivel estándar con advertencia de SLA.</p>
+            <p>🔴 <strong>Malo (&lt; 3.5):</strong> Revisión gerencial y riesgo de suspensión.</p>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="conmutarTabTecnico('acciones')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 shrink-0">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>Volver a Mi Servicio Asignado</span>
+      </button>
+
+    </div>
+
     <!-- Mapa del Técnico (Responsive: Pantalla Completa en Móvil o Columna Derecha en Desktop) -->
     <div id="tecMapContainer" class="hidden md:flex flex-1 relative bg-slate-950 flex-col min-h-[350px] h-[350px] md:h-full">
       <div class="bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between shrink-0 z-10">
@@ -940,7 +1171,7 @@
       </div>
 
       <p class="text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-        🔒 Para dar de baja a un técnico se requiere la autorización del Gerente (<span class="text-amber-400 font-mono">gerente@betgui.com / Gerente2026!</span>).
+        🔒 Para dar de baja a un técnico se requiere la autorización de un usuario con perfil de <span class="text-amber-400 font-semibold">Gerente de Operaciones</span>.
       </p>
 
     </div>
@@ -960,16 +1191,79 @@
     };
 
     /**
-     * CATÁLOGO DE TÉCNICOS DINÁMICO (POBLADO POR CARGA MASIVA Y MANUAL)
+     * CATÁLOGO DE TÉCNICOS DINÁMICO & MOTOR DE EVALUACIÓN DE RANKING
      */
     let catalogoTecnicos = [];
+
+    function calcularCategoriaRanking(score) {
+      const num = parseFloat(score) || 4.5;
+      if (num >= 4.5) return 'Bueno';
+      if (num >= 3.5) return 'Regular';
+      return 'Malo';
+    }
+
+    function getBadgeCategoriaRanking(categoria, score) {
+      const cat = categoria || calcularCategoriaRanking(score);
+      const scStr = (typeof score === 'number' ? score.toFixed(1) : (score || '4.9'));
+      if (cat === 'Bueno') {
+        return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">🟢 Bueno (⭐ ${scStr})</span>`;
+      } else if (cat === 'Regular') {
+        return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">🟡 Regular (⭐ ${scStr})</span>`;
+      } else {
+        return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 whitespace-nowrap">🔴 Malo (⭐ ${scStr})</span>`;
+      }
+    }
+
+    function actualizarMetricasRankingTecnico(tecId, accion) {
+      let tec = catalogoTecnicos.find(t => t.id === tecId);
+      if (!tec && appState.usuarioActual) {
+        tec = catalogoTecnicos.find(t => t.nombre.toLowerCase().trim() === appState.usuarioActual.nombre.toLowerCase().trim());
+      }
+      if (!tec && catalogoTecnicos.length > 0) {
+        tec = catalogoTecnicos[0];
+      }
+      if (!tec) return null;
+
+      tec.serviciosAceptados = tec.serviciosAceptados || 0;
+      tec.serviciosCancelados = tec.serviciosCancelados || 0;
+      let currentScore = parseFloat(tec.ranking) || 4.8;
+
+      if (accion === 'aceptar') {
+        tec.serviciosAceptados += 1;
+        currentScore = Math.min(5.0, currentScore + 0.1);
+      } else if (accion === 'cancelar') {
+        tec.serviciosCancelados += 1;
+        currentScore = Math.max(1.0, currentScore - 0.4);
+      }
+
+      tec.ranking = currentScore.toFixed(1);
+      tec.categoriaRanking = calcularCategoriaRanking(currentScore);
+
+      guardarEnAlmacenamientoLocal();
+      publicarSincronizacion({
+        type: 'RANKING_UPDATE',
+        data: {
+          tecId: tec.id,
+          nombre: tec.nombre,
+          ranking: tec.ranking,
+          categoria: tec.categoriaRanking,
+          aceptados: tec.serviciosAceptados,
+          cancelados: tec.serviciosCancelados
+        }
+      });
+
+      renderizarDashboardRankingAdmin();
+      renderizarVistaRankingTecnico();
+      return tec;
+    }
 
     function registrarOActualizarTecnicoDesdeDatos(tecData) {
       if (!tecData || !tecData.nombre) return null;
       const nombreTrim = tecData.nombre.trim();
       let tec = catalogoTecnicos.find(t => t.nombre.trim().toLowerCase() === nombreTrim.toLowerCase());
       
-      const rankingVal = tecData.ranking || (4.6 + (Math.floor(Math.random() * 5) / 10)).toFixed(1);
+      const rankingVal = tecData.ranking ? parseFloat(tecData.ranking).toFixed(1) : (4.6 + (Math.floor(Math.random() * 5) / 10)).toFixed(1);
+      const categoriaVal = tecData.categoriaRanking || calcularCategoriaRanking(rankingVal);
 
       if (!tec) {
         tec = {
@@ -981,6 +1275,9 @@
           estado: tecData.estado || 'Yucatán',
           cp: tecData.cp || '97000',
           ranking: rankingVal,
+          categoriaRanking: categoriaVal,
+          serviciosAceptados: tecData.serviciosAceptados || 0,
+          serviciosCancelados: tecData.serviciosCancelados || 0,
           activo: tecData.activo !== undefined ? tecData.activo : true,
           motivoBaja: tecData.motivoBaja || ""
         };
@@ -991,12 +1288,186 @@
         if (tecData.ciudad) tec.ciudad = tecData.ciudad;
         if (tecData.estado) tec.estado = tecData.estado;
         if (tecData.cp) tec.cp = tecData.cp;
-        if (tecData.ranking) tec.ranking = tecData.ranking;
+        if (tecData.ranking) {
+          tec.ranking = parseFloat(tecData.ranking).toFixed(1);
+          tec.categoriaRanking = calcularCategoriaRanking(tec.ranking);
+        }
+        if (tecData.categoriaRanking) tec.categoriaRanking = tecData.categoriaRanking;
+        if (tecData.serviciosAceptados !== undefined) tec.serviciosAceptados = tecData.serviciosAceptados;
+        if (tecData.serviciosCancelados !== undefined) tec.serviciosCancelados = tecData.serviciosCancelados;
         if (tecData.activo !== undefined) tec.activo = tecData.activo;
         if (tecData.motivoBaja !== undefined) tec.motivoBaja = tecData.motivoBaja;
       }
       guardarEnAlmacenamientoLocal();
       return tec;
+    }
+
+    /**
+     * DASHBOARD DE RANKING Y RENDIMIENTO (ADMINISTRADOR)
+     */
+    function renderizarDashboardRankingAdmin() {
+      const tbody = document.getElementById('tablaRankingAdminBody');
+      const kpiTotal = document.getElementById('kpiTotalTecnicosRank');
+      const kpiBueno = document.getElementById('kpiTecnicosBuenoRank');
+      const kpiRegular = document.getElementById('kpiTecnicosRegularRank');
+      const kpiMalo = document.getElementById('kpiTecnicosMaloRank');
+
+      if (!tbody) return;
+
+      let cTotal = catalogoTecnicos.length;
+      let cBueno = 0;
+      let cRegular = 0;
+      let cMalo = 0;
+
+      const tecnicosOrdenados = [...catalogoTecnicos].sort((a, b) => {
+        return (parseFloat(b.ranking) || 0) - (parseFloat(a.ranking) || 0);
+      });
+
+      let html = '';
+
+      if (tecnicosOrdenados.length === 0) {
+        html = `
+          <tr>
+            <td colspan="9" class="p-6 text-center text-slate-500 italic">
+              No hay técnicos registrados en el sistema. Puedes darlos de alta manualmente o importar plantilla Excel.
+            </td>
+          </tr>
+        `;
+      } else {
+        tecnicosOrdenados.forEach(tec => {
+          const score = parseFloat(tec.ranking) || 4.8;
+          const categoria = tec.categoriaRanking || calcularCategoriaRanking(score);
+          const aceptados = tec.serviciosAceptados || 0;
+          const cancelados = tec.serviciosCancelados || 0;
+          const totalOps = aceptados + cancelados;
+          const tasa = totalOps > 0 ? Math.round((aceptados / totalOps) * 100) + '%' : '100%';
+
+          if (categoria === 'Bueno') cBueno++;
+          else if (categoria === 'Regular') cRegular++;
+          else cMalo++;
+
+          const badgeCat = getBadgeCategoriaRanking(categoria, score);
+          const tel = (tec.telefono || '').replace(/\D/g, '') || '525500000000';
+          const telFormat = tec.telefono || 'Sin teléfono';
+
+          const btnBaja = (tec.activo !== false)
+            ? `<button onclick="solicitarCandadoBaja('${tec.id}')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-[11px] font-semibold transition inline-flex items-center gap-1">
+                <i data-lucide="lock" class="w-3 h-3"></i>
+                <span>Dar de Baja</span>
+               </button>`
+            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">Dado de Baja</span>`;
+
+          html += `
+            <tr class="hover:bg-slate-900/60 transition">
+              <td class="p-3 font-semibold text-white">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-slate-800 text-slate-200 border border-slate-700 flex items-center justify-center font-bold text-xs">
+                    ${(tec.nombre || 'T').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p class="font-bold text-slate-100 text-xs">${tec.nombre}</p>
+                    <p class="text-[10px] font-mono text-indigo-400">${tec.id || 'TEC-AUTO'}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="p-3 text-slate-300">
+                <p class="font-medium text-xs">${tec.ciudad || 'Mérida'}, ${tec.estado || 'Yucatán'}</p>
+                <p class="text-[10px] text-slate-500 truncate max-w-[140px]">${tec.direccion || 'Base Central'}</p>
+              </td>
+              <td class="p-3">
+                <a href="https://api.whatsapp.com/send?phone=${tel}" target="_blank" class="text-emerald-400 hover:text-emerald-300 font-mono text-xs flex items-center gap-1">
+                  <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                  <span>${telFormat}</span>
+                </a>
+              </td>
+              <td class="p-3 text-center font-bold text-emerald-400">${aceptados}</td>
+              <td class="p-3 text-center font-bold text-rose-400">${cancelados}</td>
+              <td class="p-3 text-center font-semibold text-slate-200">${tasa}</td>
+              <td class="p-3 text-center">
+                <span class="font-black text-amber-300 text-xs">⭐ ${score.toFixed(1)}</span>
+              </td>
+              <td class="p-3 text-center">${badgeCat}</td>
+              <td class="p-3 text-right">${btnBaja}</td>
+            </tr>
+          `;
+        });
+      }
+
+      tbody.innerHTML = html;
+
+      if (kpiTotal) kpiTotal.textContent = cTotal;
+      if (kpiBueno) kpiBueno.textContent = cBueno;
+      if (kpiRegular) kpiRegular.textContent = cRegular;
+      if (kpiMalo) kpiMalo.textContent = cMalo;
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    /**
+     * VISTA DE RANKING Y DESEMPEÑO DEL TÉCNICO (PORTAL TÉCNICO)
+     */
+    function renderizarVistaRankingTecnico() {
+      let tec = null;
+      if (appState.usuarioActual) {
+        const uNom = (appState.usuarioActual.nombre || '').toLowerCase().trim();
+        tec = catalogoTecnicos.find(t => {
+          const tNom = t.nombre.toLowerCase().trim();
+          return tNom === uNom || uNom.includes(tNom) || tNom.includes(uNom);
+        });
+      }
+      if (!tec && catalogoTecnicos.length > 0) {
+        tec = catalogoTecnicos[0];
+      }
+
+      const elNombre = document.getElementById('tecRankNombre');
+      const elId = document.getElementById('tecRankId');
+      const elPuntaje = document.getElementById('tecRankPuntaje');
+      const elBadge = document.getElementById('tecRankBadge');
+      const elAceptados = document.getElementById('tecRankAceptados');
+      const elCancelados = document.getElementById('tecRankCancelados');
+      const elTasa = document.getElementById('tecRankTasa');
+      const elConsejo = document.getElementById('tecRankConsejo');
+
+      if (!tec) {
+        if (elNombre) elNombre.textContent = "Técnico en Campo";
+        if (elId) elId.textContent = "ID: #TEC-101 • Base Operativa";
+        if (elPuntaje) elPuntaje.textContent = "4.9";
+        if (elBadge) elBadge.innerHTML = getBadgeCategoriaRanking('Bueno', 4.9);
+        if (elAceptados) elAceptados.textContent = "0";
+        if (elCancelados) elCancelados.textContent = "0";
+        if (elTasa) elTasa.textContent = "100%";
+        return;
+      }
+
+      const score = parseFloat(tec.ranking) || 4.8;
+      const categoria = tec.categoriaRanking || calcularCategoriaRanking(score);
+      const aceptados = tec.serviciosAceptados || 0;
+      const cancelados = tec.serviciosCancelados || 0;
+      const totalOps = aceptados + cancelados;
+      const tasa = totalOps > 0 ? Math.round((aceptados / totalOps) * 100) + '%' : '100%';
+
+      if (elNombre) elNombre.textContent = tec.nombre;
+      if (elId) elId.textContent = `ID: ${tec.id || '#TEC-101'} • Base ${tec.ciudad || 'Mérida'}, ${tec.estado || 'Yucatán'}`;
+      if (elPuntaje) elPuntaje.textContent = score.toFixed(1);
+      if (elBadge) elBadge.innerHTML = getBadgeCategoriaRanking(categoria, score);
+      if (elAceptados) elAceptados.textContent = aceptados;
+      if (elCancelados) elCancelados.textContent = cancelados;
+      if (elTasa) elTasa.textContent = tasa;
+
+      if (elConsejo) {
+        if (categoria === 'Bueno') {
+          elConsejo.className = "p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-[11px] leading-relaxed";
+          elConsejo.innerHTML = `<strong>¡Excelente calificación!</strong> Tu categoría es 🟢 <strong>Bueno</strong>. Tienes máxima prioridad en la asignación de nuevos despachos y mejores bonos de servicio. Continúa aceptando antes de 15 minutos.`;
+        } else if (categoria === 'Regular') {
+          elConsejo.className = "p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-300 text-[11px] leading-relaxed";
+          elConsejo.innerHTML = `<strong>Atención a tu desempeño:</strong> Tu calificación actual es 🟡 <strong>Regular</strong>. Para recuperar la categoría 🟢 Bueno (≥ 4.5), acepta tus próximos servicios a tiempo y evita cancelaciones.`;
+        } else {
+          elConsejo.className = "p-2.5 rounded-lg bg-rose-950/30 border border-rose-500/30 text-rose-300 text-[11px] leading-relaxed";
+          elConsejo.innerHTML = `<strong>Alerta de desempeño crítico:</strong> Tu categoría es 🔴 <strong>Malo</strong> debido a cancelaciones registradas. Comunícate con Gerencia de Operaciones para regularizar tu estatus de despacho.`;
+        }
+      }
+
+      if (window.lucide) lucide.createIcons();
     }
 
     /**
@@ -1224,6 +1695,7 @@
           guardarEnAlmacenamientoLocal();
           actualizarSelectorTecnicosForm();
           renderizarListaGestionTecnicos();
+          renderizarDashboardRankingAdmin();
           mostrarToast(`🔒 Aviso Gerencial: Técnico ${tec.nombre} ha sido DADO DE BAJA.`);
         }
       } else if (type === 'AUTO_REASSIGN') {
@@ -1242,6 +1714,21 @@
             actualizarVistaTecnicoActual();
           }
           mostrarToast(`⚡ Folio #${data.id} reasignado de ${data.tecAnterior} a ${data.nuevoTec}`);
+        }
+      } else if (type === 'RANKING_UPDATE') {
+        const tec = catalogoTecnicos.find(t => t.id === data.tecId || t.nombre.toLowerCase().trim() === (data.nombre || '').toLowerCase().trim());
+        if (tec) {
+          tec.ranking = data.ranking;
+          tec.categoriaRanking = data.categoria;
+          tec.serviciosAceptados = data.aceptados;
+          tec.serviciosCancelados = data.cancelados;
+          guardarEnAlmacenamientoLocal();
+          actualizarKPIs();
+          renderizarTabla();
+          renderizarDashboardRankingAdmin();
+          if (appState.modoActual === 'tecnico') {
+            renderizarVistaRankingTecnico();
+          }
         }
       }
     }
@@ -1445,6 +1932,8 @@
 
       actualizarKPIs();
       renderizarTabla();
+      renderizarDashboardRankingAdmin();
+      renderizarVistaRankingTecnico();
       poblarSelectorTecnicoOrdenes(folioParam);
       if (folioParam) {
         seleccionarOrdenTecnico(folioParam);
@@ -1457,6 +1946,21 @@
     /**
      * AUTENTICACIÓN
      */
+    function seleccionarPerfilLogin(rol) {
+      let email = 'admin@betgui.com';
+      if (rol === 'tecnico') email = 'tecnico@betgui.com';
+      else if (rol === 'gerente') email = 'gerente@betgui.com';
+
+      const cuenta = USUARIOS_SISTEMA[email];
+      const inpUser = document.getElementById('loginUsuario');
+      const inpPass = document.getElementById('loginPassword');
+      if (inpUser) inpUser.value = email;
+      if (inpPass && cuenta) {
+        inpPass.value = cuenta.pass;
+        inpPass.focus();
+      }
+    }
+
     function llenarLogin(u, p) {
       document.getElementById('loginUsuario').value = u;
       document.getElementById('loginPassword').value = p;
@@ -1469,7 +1973,7 @@
 
       const cuenta = USUARIOS_SISTEMA[u];
       if (!cuenta || cuenta.pass !== p) {
-        alert('Credenciales incorrectas.\nAdmin: admin@betgui.com / Admin2026!\nTécnico: tecnico@betgui.com / Tecnico2026!\nGerente: gerente@betgui.com / Gerente2026!');
+        alert('❌ Credenciales incorrectas.\nPor favor verifica tu usuario y contraseña de acceso.');
         return;
       }
 
@@ -1496,38 +2000,39 @@
     }
 
     /**
-     * PESTAÑAS MÓVILES DEL PORTAL TÉCNICO (ORDEN & ACCIONES VS MAPA VIAL)
+     * PESTAÑAS MÓVILES Y DE ESCRITORIO DEL PORTAL TÉCNICO (ORDEN & ACCIONES / MAPA VIAL / RANKING)
      */
     function conmutarTabTecnico(tab) {
       const btnAcciones = document.getElementById('tecTabBtnAcciones');
       const btnMapa = document.getElementById('tecTabBtnMapa');
+      const btnRanking = document.getElementById('tecTabBtnRanking');
+      const deskAcciones = document.getElementById('tecDeskBtnAcciones');
+      const deskRanking = document.getElementById('tecDeskBtnRanking');
       const panel = document.getElementById('tecPanelContenido');
       const mapContainer = document.getElementById('tecMapContainer');
+      const rankingPanel = document.getElementById('tecPanelRanking');
+
+      const activeBtnMob = "flex-1 py-2.5 px-2 rounded-xl bg-emerald-600 text-white font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow transition";
+      const inactiveBtnMob = "flex-1 py-2.5 px-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition";
+
+      if (btnAcciones) btnAcciones.className = inactiveBtnMob;
+      if (btnMapa) btnMapa.className = inactiveBtnMob;
+      if (btnRanking) btnRanking.className = inactiveBtnMob;
 
       if (tab === 'acciones') {
-        if (btnAcciones) {
-          btnAcciones.className = "flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition";
-        }
-        if (btnMapa) {
-          btnMapa.className = "flex-1 py-2.5 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition";
-        }
-        if (panel) {
-          panel.classList.remove('hidden');
-        }
+        if (btnAcciones) btnAcciones.className = activeBtnMob;
+        if (panel) panel.classList.remove('hidden');
+        if (rankingPanel) rankingPanel.classList.add('hidden');
         if (mapContainer) {
           mapContainer.classList.add('hidden');
           mapContainer.classList.remove('flex');
         }
-      } else {
-        if (btnMapa) {
-          btnMapa.className = "flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition";
-        }
-        if (btnAcciones) {
-          btnAcciones.className = "flex-1 py-2.5 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition";
-        }
-        if (panel) {
-          panel.classList.add('hidden');
-        }
+        if (deskAcciones) deskAcciones.className = "flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition";
+        if (deskRanking) deskRanking.className = "flex-1 py-1.5 px-3 rounded-lg text-slate-400 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition";
+      } else if (tab === 'mapa') {
+        if (btnMapa) btnMapa.className = activeBtnMob;
+        if (panel) panel.classList.add('hidden');
+        if (rankingPanel) rankingPanel.classList.add('hidden');
         if (mapContainer) {
           mapContainer.classList.remove('hidden');
           mapContainer.classList.add('flex');
@@ -1538,6 +2043,17 @@
             centrarMapaTecnico();
           }
         }, 200);
+      } else if (tab === 'ranking') {
+        if (btnRanking) btnRanking.className = activeBtnMob;
+        if (panel) panel.classList.add('hidden');
+        if (mapContainer) {
+          mapContainer.classList.add('hidden');
+          mapContainer.classList.remove('flex');
+        }
+        if (rankingPanel) rankingPanel.classList.remove('hidden');
+        if (deskAcciones) deskAcciones.className = "flex-1 py-1.5 px-3 rounded-lg text-slate-400 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition";
+        if (deskRanking) deskRanking.className = "flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition";
+        renderizarVistaRankingTecnico();
       }
       lucide.createIcons();
     }
@@ -2366,17 +2882,18 @@ ${linkTecnico}`;
           ? `<div id="timer-${s.id}" class="text-[10px] font-mono text-amber-400 font-bold mt-0.5">⏳ ${formatearTiempoMinSeg(s.segundosRestantes || 900)}</div>`
           : '';
 
-        const rankingBadge = `<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">⭐ ${s.tecnico.ranking || '4.9'}</span>`;
+        const cat = s.tecnico.categoriaRanking || calcularCategoriaRanking(s.tecnico.ranking || 4.9);
+        const rankingBadge = getBadgeCategoriaRanking(cat, s.tecnico.ranking || '4.9');
 
         tr.innerHTML = `
           <td class="p-2.5 font-mono font-bold text-indigo-400 whitespace-nowrap">${s.id}</td>
           <td class="p-2.5">
-            <div class="font-semibold text-white truncate max-w-[140px]">${s.cliente.nombre}</div>
-            <div class="text-[10px] text-slate-400 truncate max-w-[140px]">${s.cliente.ciudad}</div>
+            <div class="font-bold text-white text-xs truncate max-w-[190px]" title="${s.cliente.nombre}">${s.cliente.nombre}</div>
+            <div class="text-[10px] text-slate-400 truncate max-w-[190px]" title="${s.cliente.direccion || ''}, ${s.cliente.ciudad}, ${s.cliente.estado || ''}">📍 ${s.cliente.direccion ? s.cliente.direccion + ' · ' : ''}${s.cliente.ciudad}</div>
           </td>
           <td class="p-2.5">
-            <div class="flex items-center gap-1">
-              <span class="font-medium text-slate-200 truncate max-w-[110px]">${s.tecnico.nombre}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-medium text-slate-200 truncate max-w-[130px]" title="${s.tecnico.nombre}">${s.tecnico.nombre}</span>
               ${rankingBadge}
             </div>
             <div class="text-[10px] text-slate-400">📱 ${s.tecnico.telefono || 'S/N'} · Salida: ${s.horaInicio}</div>
@@ -2612,7 +3129,7 @@ ${linkTecnico}`;
 
       const cuenta = USUARIOS_SISTEMA[u];
       if (!cuenta || cuenta.rol !== 'gerente' || cuenta.pass !== p) {
-        alert('❌ AUTORIZACIÓN DENEGADA:\nSolo el usuario Gerente (gerente@betgui.com / Gerente2026!) posee el candado para dar de baja.');
+        alert('❌ AUTORIZACIÓN DENEGADA:\nSe requieren credenciales oficiales con perfil de Gerente de Operaciones para desbloquear este candado.');
         return;
       }
 
@@ -2624,6 +3141,7 @@ ${linkTecnico}`;
       guardarEnAlmacenamientoLocal();
       cerrarModalBajaGerente();
       actualizarSelectorTecnicosForm();
+      renderizarDashboardRankingAdmin();
       
       publicarSincronizacion({
         type: 'TECNICO_BAJA',
@@ -2659,15 +3177,40 @@ ${linkTecnico}`;
         if (elDist) elDist.innerText = '0 km';
         if (elTiempo) elTiempo.innerText = '0 min';
         if (elSla) elSla.innerText = 'SLA N/A';
+        restablecerVistaTecnicoEnEspera();
         return;
       }
 
       const urlParams = new URLSearchParams(window.location.search);
       const targetFolio = folioPredefinido || urlParams.get('folio');
 
-      let seleccionado = null;
+      // Filtrar exclusivamente los servicios que pertenecen a este técnico
+      let serviciosTecnico = appState.servicios;
+      if (appState.modoActual === 'tecnico' || (appState.usuarioActual && appState.usuarioActual.rol === 'tecnico')) {
+        const uNom = (appState.usuarioActual && appState.usuarioActual.nombre) ? appState.usuarioActual.nombre.toLowerCase().trim() : '';
+        serviciosTecnico = appState.servicios.filter(s => {
+          if (targetFolio && s.id === targetFolio) return true;
+          const sTecNom = (s.tecnico && s.tecnico.nombre) ? s.tecnico.nombre.toLowerCase().trim() : '';
+          return (uNom && (sTecNom.includes(uNom) || uNom.includes(sTecNom))) || (s.id === targetFolio);
+        });
+        if (serviciosTecnico.length === 0 && targetFolio) {
+          const matchTarget = appState.servicios.find(s => s.id === targetFolio);
+          if (matchTarget) serviciosTecnico = [matchTarget];
+        }
+      }
 
-      appState.servicios.forEach(s => {
+      // Omitir servicios que ya fueron cancelados para mantener la cola limpia
+      const serviciosActivos = serviciosTecnico.filter(s => s.estatusTecnico !== 'Cancelado');
+
+      if (serviciosActivos.length === 0) {
+        select.innerHTML = '<option value="">Sin servicios activos asignados</option>';
+        actualizarBannerTecnico('Sin Asignaciones', '');
+        restablecerVistaTecnicoEnEspera();
+        return;
+      }
+
+      let seleccionado = null;
+      serviciosActivos.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.id;
         opt.textContent = `${s.id} - ${s.cliente.nombre} (${s.estatusTecnico})`;
@@ -2678,9 +3221,39 @@ ${linkTecnico}`;
         select.appendChild(opt);
       });
 
-      const folioElegido = seleccionado || select.value || appState.servicios[0].id;
+      const folioElegido = seleccionado || select.value || serviciosActivos[0].id;
       select.value = folioElegido;
       seleccionarOrdenTecnico(folioElegido);
+    }
+
+    function restablecerVistaTecnicoEnEspera() {
+      appState.servicioActivoId = null;
+      const elFolio = document.getElementById('tecCardFolio');
+      const elCli = document.getElementById('tecCardCliente');
+      const elDir = document.getElementById('tecCardDireccion');
+      const elCd = document.getElementById('tecCardCiudad');
+      const elDist = document.getElementById('tecCardDistancia');
+      const elTiempo = document.getElementById('tecCardTiempo');
+      const elSla = document.getElementById('tecCardSlaBadge');
+      if (elFolio) elFolio.innerText = '---';
+      if (elCli) elCli.innerText = 'En espera de nuevo servicio';
+      if (elDir) elDir.innerText = 'Sin órdenes asignadas en este momento';
+      if (elCd) elCd.innerText = 'Turno disponible para asignación';
+      if (elDist) elDist.innerText = '0 km';
+      if (elTiempo) elTiempo.innerText = '0 min';
+      if (elSla) elSla.innerText = 'SLA N/A';
+
+      const banner = document.getElementById('tecBannerEstado');
+      if (banner) {
+        banner.className = "p-2.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-center font-bold text-xs";
+        banner.innerHTML = "⏳ En Espera de Nueva Asignación de Despacho (Turno Disponible)";
+      }
+
+      if (appState.markersGroupTecnico) appState.markersGroupTecnico.clearLayers();
+      if (appState.routePolylineTec && appState.leafletMapTecnico) {
+        appState.leafletMapTecnico.removeLayer(appState.routePolylineTec);
+        appState.routePolylineTec = null;
+      }
     }
 
     function seleccionarOrdenTecnico(id) {
@@ -2710,7 +3283,10 @@ ${linkTecnico}`;
       const elNombreTec = document.getElementById('tecCardNombreTec');
       const elRanking = document.getElementById('tecCardRanking');
       if (elNombreTec) elNombreTec.innerText = s.tecnico.nombre;
-      if (elRanking) elRanking.innerText = `⭐ ${s.tecnico.ranking || '4.9'}`;
+      if (elRanking) {
+        const cat = s.tecnico.categoriaRanking || calcularCategoriaRanking(s.tecnico.ranking || 4.9);
+        elRanking.innerHTML = `⭐ ${s.tecnico.ranking || '4.9'} (${cat})`;
+      }
 
       const d = s.ruta.destinoCoords;
       const btnGps = document.getElementById('btnNavGpsTec');
@@ -2727,7 +3303,7 @@ ${linkTecnico}`;
       if (!banner) return;
       if (estatus === 'Aceptado') {
         banner.className = "p-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-center font-bold text-xs";
-        banner.innerHTML = "✅ Servicio Aceptado por el Técnico";
+        banner.innerHTML = "✅ Servicio Aceptado por el Técnico (Confirmación Enviada)";
       } else if (estatus === 'En Camino') {
         banner.className = "p-2.5 rounded-xl border border-indigo-500/40 bg-indigo-500/10 text-indigo-400 text-center font-bold text-xs";
         banner.innerHTML = "🚗 Técnico En Camino al Sitio";
@@ -2760,6 +3336,32 @@ ${linkTecnico}`;
 
       s.estatusTecnico = nuevoEstado;
       s.motivoCancelacion = '';
+
+      // Si el técnico acepta, premiar ranking y emitir confirmación por WhatsApp a Central
+      if (nuevoEstado === 'Aceptado') {
+        actualizarMetricasRankingTecnico(s.tecnico.id, 'aceptar');
+        const tecActual = catalogoTecnicos.find(t => t.id === s.tecnico.id) || s.tecnico;
+        s.tecnico.ranking = tecActual.ranking || s.tecnico.ranking;
+        s.tecnico.categoriaRanking = tecActual.categoriaRanking || 'Bueno';
+
+        const rankingStr = s.tecnico.ranking ? `⭐ ${s.tecnico.ranking}` : '⭐ 4.9';
+        const catStr = s.tecnico.categoriaRanking ? `(${s.tecnico.categoriaRanking})` : '(Bueno)';
+
+        const mensajeConfirmacion = 
+`✅ *BET-GUI LOGÍSTICA | CONFIRMACIÓN DE SERVICIO ACEPTADO*
+━━━━━━━━━━━━━━━━━━━━━
+📋 *FOLIO:* #${s.id}
+👤 *TÉCNICO:* ${s.tecnico.nombre} (${rankingStr} ${catStr})
+🏢 *CLIENTE:* ${s.cliente.nombre}
+📍 *DESTINO:* ${s.cliente.direccion}, ${s.cliente.ciudad}, ${s.cliente.estado}
+⏱️ *SLA:* ${s.sla.nivel} (${s.sla.estatus})
+━━━━━━━━━━━━━━━━━━━━━
+🟢 *ESTATUS:* El técnico ha ACEPTADO formalmente el servicio dentro del límite de 15 minutos y se encuentra preparándose para el traslado.`;
+
+        const telCentral = '525585601910';
+        const wpConfirmUrl = `https://api.whatsapp.com/send?phone=${telCentral}&text=${encodeURIComponent(mensajeConfirmacion)}`;
+        window.open(wpConfirmUrl, '_blank');
+      }
 
       guardarEnAlmacenamientoLocal();
       actualizarBannerTecnico(nuevoEstado, '');
@@ -2796,20 +3398,28 @@ ${linkTecnico}`;
       s.estatusTecnico = 'Cancelado';
       s.motivoCancelacion = mot.trim();
 
+      // Aplicar penalización de ranking al técnico por cancelación de orden
+      actualizarMetricasRankingTecnico(s.tecnico.id, 'cancelar');
+      const tecActual = catalogoTecnicos.find(t => t.id === s.tecnico.id) || s.tecnico;
+      s.tecnico.ranking = tecActual.ranking || s.tecnico.ranking;
+      s.tecnico.categoriaRanking = tecActual.categoriaRanking || 'Regular';
+
       guardarEnAlmacenamientoLocal();
-      actualizarBannerTecnico('Cancelado', s.motivoCancelacion);
       actualizarKPIs();
       renderizarTabla();
-      poblarSelectorTecnicoOrdenes(s.id);
 
       publicarSincronizacion({
         type: 'STATUS_UPDATE',
         data: { id: s.id, status: 'Cancelado', motivo: s.motivoCancelacion, service: s }
       });
 
-      mostrarToast(`🔴 Servicio #${s.id} cancelado con motivo: ${s.motivoCancelacion}`);
+      // Restablecer de inmediato la interfaz del técnico a "En espera de nuevo servicio"
+      restablecerVistaTecnicoEnEspera();
+      poblarSelectorTecnicoOrdenes();
 
-      if (confirm(`El servicio #${s.id} fue rechazado por ${s.tecnico.nombre}.\n¿Deseas reasignarlo automáticamente al siguiente técnico más cercano que cumpla con el SLA?`)) {
+      mostrarToast(`🔴 Servicio #${s.id} cancelado. Interfaz restablecida: En espera de nuevo servicio.`);
+
+      if (confirm(`El servicio #${s.id} fue cancelado por ${s.tecnico.nombre}.\n¿Deseas reasignarlo automáticamente al siguiente técnico más cercano que cumpla con el SLA?`)) {
         ejecutarReasignacionPorTimeout(s.id);
       }
     }
@@ -2915,31 +3525,62 @@ ${linkTecnico}`;
       appState.modoVista = modo;
       const mapCont = document.getElementById('mapSectionContainer');
       const tableCont = document.getElementById('tableSectionContainer');
+      const rankingCont = document.getElementById('rankingSectionContainer');
       const bSplit = document.getElementById('viewBtnSplit');
       const bMap = document.getElementById('viewBtnMap');
       const bTable = document.getElementById('viewBtnTable');
+      const bRanking = document.getElementById('viewBtnRanking');
 
-      bSplit.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
-      bMap.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
-      bTable.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
+      const inactiveBtn = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
+      const activeBtn = "px-2.5 py-1 rounded bg-indigo-600 text-white font-medium flex items-center gap-1 transition";
+
+      if (bSplit) bSplit.className = inactiveBtn;
+      if (bMap) bMap.className = inactiveBtn;
+      if (bTable) bTable.className = inactiveBtn;
+      if (bRanking) bRanking.className = inactiveBtn;
 
       if (modo === 'split') {
-        bSplit.className = "px-2.5 py-1 rounded bg-indigo-600 text-white font-medium flex items-center gap-1 transition";
-        mapCont.className = "flex-1 xl:w-1/2 min-h-[340px] xl:h-full relative bg-slate-950 flex flex-col border-b xl:border-b-0 xl:border-r border-slate-800";
-        tableCont.className = "flex-1 xl:w-1/2 min-h-[300px] xl:h-full flex flex-col overflow-hidden bg-slate-900/40 p-3";
+        if (bSplit) bSplit.className = activeBtn;
+        if (mapCont) {
+          mapCont.classList.remove('hidden');
+          mapCont.className = "flex-1 xl:w-1/2 min-h-[340px] xl:h-full relative bg-slate-950 flex flex-col border-b xl:border-b-0 xl:border-r border-slate-800";
+        }
+        if (tableCont) {
+          tableCont.classList.remove('hidden');
+          tableCont.className = "flex-1 xl:w-1/2 min-h-[300px] xl:h-full flex flex-col overflow-hidden bg-slate-900/40 p-3";
+        }
+        if (rankingCont) rankingCont.classList.add('hidden');
       } else if (modo === 'map') {
-        bMap.className = "px-2.5 py-1 rounded bg-indigo-600 text-white font-medium flex items-center gap-1 transition";
-        mapCont.className = "flex-1 w-full h-full relative bg-slate-950 flex flex-col";
-        tableCont.className = "hidden";
+        if (bMap) bMap.className = activeBtn;
+        if (mapCont) {
+          mapCont.classList.remove('hidden');
+          mapCont.className = "flex-1 w-full h-full relative bg-slate-950 flex flex-col";
+        }
+        if (tableCont) tableCont.classList.add('hidden');
+        if (rankingCont) rankingCont.classList.add('hidden');
       } else if (modo === 'table') {
-        bTable.className = "px-2.5 py-1 rounded bg-indigo-600 text-white font-medium flex items-center gap-1 transition";
-        mapCont.className = "hidden";
-        tableCont.className = "flex-1 w-full h-full flex flex-col overflow-hidden bg-slate-900/40 p-3";
+        if (bTable) bTable.className = activeBtn;
+        if (mapCont) mapCont.classList.add('hidden');
+        if (tableCont) {
+          tableCont.classList.remove('hidden');
+          tableCont.className = "flex-1 w-full h-full flex flex-col overflow-hidden bg-slate-900/40 p-3";
+        }
+        if (rankingCont) rankingCont.classList.add('hidden');
+      } else if (modo === 'ranking') {
+        if (bRanking) bRanking.className = activeBtn;
+        if (mapCont) mapCont.classList.add('hidden');
+        if (tableCont) tableCont.classList.add('hidden');
+        if (rankingCont) {
+          rankingCont.classList.remove('hidden');
+          rankingCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
+        }
+        renderizarDashboardRankingAdmin();
       }
 
       setTimeout(() => {
         if (appState.leafletMapAdmin) appState.leafletMapAdmin.invalidateSize();
       }, 300);
+      if (window.lucide) lucide.createIcons();
     }
 
     function poblarSelectoresEstados() {
@@ -3026,11 +3667,35 @@ ${linkTecnico}`;
 
           for (const fila of jsonData) {
             const getCol = (posiblesNombres, valorDefault = '') => {
-              for (const k of Object.keys(fila)) {
-                const norm = k.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                for (const pos of posiblesNombres) {
-                  const normPos = pos.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                  if (norm === normPos || norm.includes(normPos)) {
+              // 1. Paso de coincidencia exacta estricta
+              for (const pos of posiblesNombres) {
+                const normPos = pos.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                for (const k of Object.keys(fila)) {
+                  const norm = k.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                  if (norm === normPos) {
+                    if (fila[k] !== undefined && fila[k] !== null && String(fila[k]).trim() !== '') {
+                      return String(fila[k]).trim();
+                    }
+                  }
+                }
+              }
+              // 2. Paso de coincidencia parcial segura evitando falsos positivos
+              for (const pos of posiblesNombres) {
+                const normPos = pos.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                for (const k of Object.keys(fila)) {
+                  const norm = k.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                  if (norm.includes(normPos)) {
+                    // Evitar que columnas como "Dirección Cliente" o "Teléfono Cliente" coincidan cuando se busca solo "Cliente"
+                    if (normPos === 'cliente' || normPos === 'nombre cliente') {
+                      if (norm.includes('direccion') || norm.includes('ciudad') || norm.includes('estado') || norm.includes('cp') || norm.includes('telefono') || norm.includes('celular')) {
+                        continue;
+                      }
+                    }
+                    if (normPos === 'tecnico' || normPos === 'nombre tecnico') {
+                      if (norm.includes('direccion') || norm.includes('ciudad') || norm.includes('estado') || norm.includes('cp') || norm.includes('telefono') || norm.includes('celular') || norm.includes('ranking')) {
+                        continue;
+                      }
+                    }
                     if (fila[k] !== undefined && fila[k] !== null && String(fila[k]).trim() !== '') {
                       return String(fila[k]).trim();
                     }
