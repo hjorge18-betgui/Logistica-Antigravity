@@ -1895,28 +1895,67 @@
     }
 
     function calcularMetricasRankingPonderado(tecId) {
-      let tec = catalogoTecnicos.find(t => t.id === tecId);
+      let tec = null;
+      if (tecId) {
+        tec = catalogoTecnicos.find(t => t.id === tecId || (t.nombre && t.nombre.toLowerCase().trim() === tecId.toLowerCase().trim()));
+      }
+      if (!tec && appState.servicioActivoId) {
+        const sAct = appState.servicios.find(s => s.id === appState.servicioActivoId);
+        if (sAct && sAct.tecnico) {
+          tec = catalogoTecnicos.find(t => (sAct.tecnico.id && t.id === sAct.tecnico.id) || (t.nombre && sAct.tecnico.nombre && t.nombre.toLowerCase().trim() === sAct.tecnico.nombre.toLowerCase().trim()));
+        }
+      }
       if (!tec && appState.usuarioActual) {
         tec = catalogoTecnicos.find(t => t.nombre.toLowerCase().trim() === appState.usuarioActual.nombre.toLowerCase().trim());
       }
       if (!tec && catalogoTecnicos.length > 0) tec = catalogoTecnicos[0];
       if (!tec) return null;
 
-      const misServicios = appState.servicios.filter(s => 
-        s.tecnico && (s.tecnico.id === tec.id || s.tecnico.nombre.toLowerCase().trim() === tec.nombre.toLowerCase().trim())
+      const misServicios = (appState.servicios || []).filter(s => 
+        !s.eliminada && s.tecnico && (
+          (s.tecnico.id && tec.id && s.tecnico.id === tec.id) || 
+          (s.tecnico.nombre && tec.nombre && s.tecnico.nombre.toLowerCase().trim() === tec.nombre.toLowerCase().trim())
+        )
       );
 
-      const totalAsignados = Math.max(misServicios.length, (tec.serviciosAceptados || 0) + (tec.serviciosCancelados || 0));
+      const serviciosAceptadosBase = tec.serviciosAceptados || 0;
+      const serviciosCanceladosBase = tec.serviciosCancelados || 0;
 
-      // 1. Componente 50%: Aceptación o Cancelación dentro de los 15 minutos
-      const timeoutsSinRespuesta = misServicios.filter(s => 
+      // 1. Componente 30%: Aceptación oportuna dentro de los 15 minutos
+      const timeouts15m = misServicios.filter(s => 
         s.estatusTecnico === 'Cancelado' && s.motivoCancelacion && s.motivoCancelacion.toLowerCase().includes('15 min')
       ).length;
-      const totalFaltas15m = timeoutsSinRespuesta + (tec.serviciosCancelados || 0);
-      const aceptados15m = Math.max(0, totalAsignados - totalFaltas15m);
-      const tasa15m = totalAsignados > 0 ? Math.max(0, Math.min(100, Math.round((aceptados15m / totalAsignados) * 100))) : 100;
+      const canceladosDirectos = misServicios.filter(s => 
+        s.estatusTecnico === 'Cancelado' && (!s.motivoCancelacion || !s.motivoCancelacion.toLowerCase().includes('15 min'))
+      ).length;
+      const faltas15m = timeouts15m + canceladosDirectos + serviciosCanceladosBase;
 
-      // 2. Componente 30%: Puntualidad Llegada a Sitio (SLA / 1h) con Exoneración por Justificación
+      const atendidos15m = misServicios.filter(s => 
+        ['Aceptado', 'En Camino', 'Llegó', 'Finalizado'].includes(s.estatusTecnico) && 
+        (!s.tiemposMinutos || !s.tiemposMinutos.respuesta || s.tiemposMinutos.respuesta <= 15)
+      ).length + serviciosAceptadosBase;
+
+      const totalOps15m = atendidos15m + faltas15m;
+      const tasa15m = totalOps15m > 0 ? Math.max(0, Math.min(100, Math.round((atendidos15m / totalOps15m) * 100))) : 100;
+
+      // 2. Componente 15%: Tiempos de Respuesta al Despacho
+      const tiemposResp = misServicios
+        .filter(s => s.tiemposMinutos && typeof s.tiemposMinutos.respuesta === 'number' && s.tiemposMinutos.respuesta > 0)
+        .map(s => s.tiemposMinutos.respuesta);
+
+      let promedioRespuestaMin = 2;
+      let tasaTiempoRespuesta = 100;
+      if (tiemposResp.length > 0) {
+        promedioRespuestaMin = Math.round(tiemposResp.reduce((a, b) => a + b, 0) / tiemposResp.length);
+        if (promedioRespuestaMin <= 2) tasaTiempoRespuesta = 100;
+        else if (promedioRespuestaMin <= 5) tasaTiempoRespuesta = 95;
+        else if (promedioRespuestaMin <= 10) tasaTiempoRespuesta = 85;
+        else if (promedioRespuestaMin <= 15) tasaTiempoRespuesta = 70;
+        else if (promedioRespuestaMin <= 20) tasaTiempoRespuesta = 40;
+        else tasaTiempoRespuesta = 20;
+      }
+
+      // 3. Componente 25%: Puntualidad / Llegada Temprano a Sitio (SLA) con Exoneración por Justificación
       const serviciosEnSitioOFin = misServicios.filter(s => 
         ['Llegó', 'Finalizado'].includes(s.estatusTecnico) || (s.timestamps && s.timestamps.enSitio)
       );
@@ -1926,7 +1965,8 @@
 
       serviciosEnSitioOFin.forEach(s => {
         const dur = (s.tiemposMinutos && s.tiemposMinutos.traslado) || (s.ruta ? s.ruta.duracionMinutos : 0);
-        const fueTarde = dur > 60 || (s.sla && s.sla.estatus === 'Incumplido') || s.llegadaTarde;
+        const durEst = (s.ruta && s.ruta.duracionMinutos) || 45;
+        const fueTarde = dur > 60 || dur > (durEst + 10) || (s.sla && s.sla.estatus === 'Incumplido') || s.llegadaTarde;
         if (fueTarde) {
           totalLlegadasTarde++;
           if (s.retrasoJustificado) {
@@ -1937,11 +1977,43 @@
         }
       });
 
-      const totalEvaluadosPuntualidad = Math.max(serviciosEnSitioOFin.length, 1);
-      const puntualidadEfectiva = Math.max(0, totalEvaluadosPuntualidad - llegadasTardeSinJustificar);
-      const tasaPuntualidad = Math.max(0, Math.min(100, Math.round((puntualidadEfectiva / totalEvaluadosPuntualidad) * 100)));
+      const totalEvaluadosPuntualidad = serviciosEnSitioOFin.length;
+      const tasaPuntualidad = totalEvaluadosPuntualidad > 0 
+        ? Math.max(0, Math.min(100, Math.round(((totalEvaluadosPuntualidad - llegadasTardeSinJustificar) / totalEvaluadosPuntualidad) * 100))) 
+        : 100;
 
-      // 3. Componente 20%: Solución Efectiva en Sitio (<= 4 horas)
+      // 4. Componente 15%: Efectividad Operativa de Servicios Atendidos vs Cancelados
+      const serviciosAtendidos = misServicios.filter(s => ['Aceptado', 'En Camino', 'Llegó', 'Finalizado'].includes(s.estatusTecnico)).length + serviciosAceptadosBase;
+      const serviciosCancelados = misServicios.filter(s => s.estatusTecnico === 'Cancelado').length + serviciosCanceladosBase;
+      const totalOpsAtencion = serviciosAtendidos + serviciosCancelados;
+      const tasaEfectividad = totalOpsAtencion > 0 
+        ? Math.max(0, Math.min(100, Math.round((serviciosAtendidos / totalOpsAtencion) * 100))) 
+        : 100;
+
+      // 5. Componente 15%: Actitud y Calidad de Servicio
+      let puntosActitudTotal = 0;
+      let conteoActitud = 0;
+
+      misServicios.forEach(s => {
+        if (['Aceptado', 'En Camino', 'Llegó', 'Finalizado'].includes(s.estatusTecnico)) {
+          const scoreIndividual = (typeof s.calidadActitud === 'number') ? s.calidadActitud : 5.0;
+          puntosActitudTotal += scoreIndividual;
+          conteoActitud++;
+        } else if (s.estatusTecnico === 'Cancelado') {
+          const mot = (s.motivoCancelacion || '').toLowerCase();
+          if (mot.includes('actitud') || mot.includes('rechazo') || mot.includes('conflicto') || mot.includes('groser') || mot.includes('desinteres')) {
+            puntosActitudTotal += 1.0;
+          } else {
+            puntosActitudTotal += 3.5;
+          }
+          conteoActitud++;
+        }
+      });
+
+      const promedioActitudEstrellas = conteoActitud > 0 ? (puntosActitudTotal / conteoActitud) : 5.0;
+      const tasaActitud = Math.max(0, Math.min(100, Math.round((promedioActitudEstrellas / 5.0) * 100)));
+
+      // Métricas complementarias de solución en sitio (<= 4 horas)
       const serviciosFinalizados = misServicios.filter(s => s.estatusTecnico === 'Finalizado');
       let casosExceden4h = 0;
       let sumaSolucionMin = 0;
@@ -1962,12 +2034,26 @@
       const promedioSolucionMin = serviciosFinalizados.length > 0 ? Math.round(sumaSolucionMin / serviciosFinalizados.length) : 0;
       const promedioTotalAtencionMin = serviciosFinalizados.length > 0 ? Math.round(sumaTotalAtencionMin / serviciosFinalizados.length) : 0;
 
-      // Ponderación global matemática
-      const scorePct = Math.round((tasa15m * 0.50) + (tasaPuntualidad * 0.30) + (tasaSolucion * 0.20));
+      // Ponderación global de 5 factores operativos
+      const scorePct = Math.round(
+        (tasa15m * 0.30) + 
+        (tasaTiempoRespuesta * 0.15) + 
+        (tasaPuntualidad * 0.25) + 
+        (tasaEfectividad * 0.15) + 
+        (tasaActitud * 0.15)
+      );
       const scoreEstrellas = Math.max(1.0, Math.min(5.0, 1.0 + (scorePct / 100 * 4.0)));
 
       tec.ranking = scoreEstrellas.toFixed(1);
       tec.categoriaRanking = calcularCategoriaRanking(tec.ranking);
+
+      // Sincronizar hacia todos los servicios activos del técnico
+      misServicios.forEach(s => {
+        if (s.tecnico) {
+          s.tecnico.ranking = tec.ranking;
+          s.tecnico.categoriaRanking = tec.categoriaRanking;
+        }
+      });
 
       // Estado de Carga / Disponibilidad condicionado estrictamente a 'Aceptado'
       const servAceptado = misServicios.find(s => s.estatusTecnico === 'Aceptado');
@@ -1976,14 +2062,21 @@
       tec.estadoCarga = servAceptado ? 'Ocupado' : '';
 
       tec.metricas = {
-        totalAsignados,
+        totalAsignados: totalOpsAtencion,
         tasa15m,
-        aceptados15m,
-        totalFaltas15m,
+        aceptados15m: atendidos15m,
+        totalFaltas15m: faltas15m,
+        tasaTiempoRespuesta,
+        promedioRespuestaMin,
         tasaPuntualidad,
         totalLlegadasTarde,
         llegadasTardeSinJustificar,
         llegadasTardeJustificadas,
+        serviciosAtendidos,
+        serviciosCancelados,
+        tasaEfectividad,
+        tasaActitud,
+        promedioActitudEstrellas: promedioActitudEstrellas.toFixed(1),
         tasaSolucion,
         casosExceden4h,
         promedioSolucionMin,
@@ -1995,7 +2088,19 @@
     }
 
     function actualizarMetricasRankingTecnico(tecId, accion) {
-      let tec = catalogoTecnicos.find(t => t.id === tecId);
+      let tec = null;
+      if (tecId) {
+        tec = catalogoTecnicos.find(t => t.id === tecId || (t.nombre && t.nombre.toLowerCase().trim() === tecId.toLowerCase().trim()));
+      }
+      if (!tec && appState.servicioActivoId) {
+        const s = appState.servicios.find(x => x.id === appState.servicioActivoId);
+        if (s && s.tecnico) {
+          tec = catalogoTecnicos.find(t => (s.tecnico.id && t.id === s.tecnico.id) || (t.nombre && s.tecnico.nombre && t.nombre.toLowerCase().trim() === s.tecnico.nombre.toLowerCase().trim()));
+          if (!tec && s.tecnico.nombre) {
+            tec = registrarOActualizarTecnicoDesdeDatos(s.tecnico);
+          }
+        }
+      }
       if (!tec && appState.usuarioActual) {
         tec = catalogoTecnicos.find(t => t.nombre.toLowerCase().trim() === appState.usuarioActual.nombre.toLowerCase().trim());
       }
@@ -2013,6 +2118,12 @@
 
       calcularMetricasRankingPonderado(tec.id);
 
+      // Actualizar la tarjeta de orden del técnico si está visible
+      const elRanking = document.getElementById('tecCardRanking');
+      if (elRanking) {
+        elRanking.innerHTML = `⭐ ${tec.ranking} (${tec.categoriaRanking})`;
+      }
+
       guardarEnAlmacenamientoLocal();
       publicarSincronizacion({
         type: 'RANKING_UPDATE',
@@ -2028,7 +2139,7 @@
       });
 
       renderizarDashboardRankingAdmin();
-      renderizarVistaRankingTecnico();
+      renderizarVistaRankingTecnico(tec.id);
       return tec;
     }
 
@@ -2202,12 +2313,43 @@
     /**
      * VISTA DE RANKING Y DESEMPEÑO DEL TÉCNICO (PORTAL TÉCNICO)
      */
-    function renderizarVistaRankingTecnico() {
+    function renderizarVistaRankingTecnico(targetTecId) {
       let tec = null;
-      if (appState.usuarioActual) {
+      if (targetTecId) {
+        tec = catalogoTecnicos.find(t => t.id === targetTecId || (t.nombre && t.nombre.toLowerCase().trim() === targetTecId.toLowerCase().trim()));
+      }
+      if (!tec && appState.servicioActivoId) {
+        const s = appState.servicios.find(x => x.id === appState.servicioActivoId);
+        if (s && s.tecnico) {
+          tec = catalogoTecnicos.find(t => (s.tecnico.id && t.id === s.tecnico.id) || (t.nombre && s.tecnico.nombre && t.nombre.toLowerCase().trim() === s.tecnico.nombre.toLowerCase().trim()));
+          if (!tec && s.tecnico.nombre) {
+            tec = registrarOActualizarTecnicoDesdeDatos(s.tecnico);
+          }
+        }
+      }
+      if (!tec) {
+        const select = document.getElementById('tecOrdenSelect');
+        if (select && select.value) {
+          const s = appState.servicios.find(x => x.id === select.value);
+          if (s && s.tecnico) {
+            tec = catalogoTecnicos.find(t => (s.tecnico.id && t.id === s.tecnico.id) || (t.nombre && s.tecnico.nombre && t.nombre.toLowerCase().trim() === s.tecnico.nombre.toLowerCase().trim()));
+            if (!tec && s.tecnico.nombre) {
+              tec = registrarOActualizarTecnicoDesdeDatos(s.tecnico);
+            }
+          }
+        }
+      }
+      if (!tec && appState.usuarioActual && appState.usuarioActual.rol === 'tecnico') {
         const uNom = (appState.usuarioActual.nombre || '').toLowerCase().trim();
         tec = catalogoTecnicos.find(t => {
-          const tNom = t.nombre.toLowerCase().trim();
+          const tNom = (t.nombre || '').toLowerCase().trim();
+          return tNom === uNom || uNom.includes(tNom) || tNom.includes(uNom);
+        });
+      }
+      if (!tec && appState.usuarioActual) {
+        const uNom = (appState.usuarioActual.nombre || '').toLowerCase().trim();
+        tec = catalogoTecnicos.find(t => {
+          const tNom = (t.nombre || '').toLowerCase().trim();
           return tNom === uNom || uNom.includes(tNom) || tNom.includes(uNom);
         });
       }
@@ -2224,7 +2366,7 @@
       const elTasa = document.getElementById('tecRankTasa');
       const elConsejo = document.getElementById('tecRankConsejo');
 
-      // Nuevos elementos métricos 50/30/20
+      // Elementos métricos
       const elTasa15m = document.getElementById('tecRankTasa15m');
       const elPuntualidad = document.getElementById('tecRankPuntualidad');
       const elPromSolucion = document.getElementById('tecRankPromSolucion');
@@ -2244,10 +2386,10 @@
       const met = calcularMetricasRankingPonderado(tec.id) || {};
       const score = parseFloat(tec.ranking) || 4.8;
       const categoria = tec.categoriaRanking || calcularCategoriaRanking(score);
-      const aceptados = tec.serviciosAceptados || 0;
-      const cancelados = tec.serviciosCancelados || 0;
+      const aceptados = met.serviciosAtendidos !== undefined ? met.serviciosAtendidos : (tec.serviciosAceptados || 0);
+      const cancelados = met.serviciosCancelados !== undefined ? met.serviciosCancelados : (tec.serviciosCancelados || 0);
       const totalOps = aceptados + cancelados;
-      const tasa = totalOps > 0 ? Math.round((aceptados / totalOps) * 100) + '%' : '100%';
+      const tasa = (met.tasaEfectividad !== undefined) ? met.tasaEfectividad + '%' : (totalOps > 0 ? Math.round((aceptados / totalOps) * 100) + '%' : '100%');
 
       if (elNombre) elNombre.textContent = tec.nombre;
       if (elId) elId.textContent = `ID: ${tec.id || '#TEC-101'} • Base ${tec.ciudad || 'Mérida'}, ${tec.estado || 'Yucatán'}`;
@@ -2257,21 +2399,21 @@
       if (elCancelados) elCancelados.textContent = cancelados;
       if (elTasa) elTasa.textContent = tasa;
 
-      if (elTasa15m) elTasa15m.textContent = (met.tasa15m || 100) + '%';
-      if (elPuntualidad) elPuntualidad.textContent = (met.tasaPuntualidad || 100) + '%';
+      if (elTasa15m) elTasa15m.textContent = (met.tasa15m !== undefined ? met.tasa15m : 100) + '%';
+      if (elPuntualidad) elPuntualidad.textContent = (met.tasaPuntualidad !== undefined ? met.tasaPuntualidad : 100) + '%';
       if (elPromSolucion) elPromSolucion.textContent = (met.promedioSolucionMin || 0) + ' min';
       if (elPromTotal) elPromTotal.textContent = (met.promedioTotalAtencionMin || 0) + ' min';
 
       if (elConsejo) {
         if (categoria === 'Bueno') {
           elConsejo.className = "p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-[11px] leading-relaxed";
-          elConsejo.innerHTML = `<strong>¡Excelente calificación!</strong> Tu categoría es 🟢 <strong>Bueno (⭐ ${score.toFixed(1)})</strong>. Cumples al ${met.tasa15m || 100}% el límite de 15 minutos y ${met.tasaPuntualidad || 100}% la puntualidad en sitio. Tienes máxima prioridad en asignación de rutas.`;
+          elConsejo.innerHTML = `<strong>¡Excelente calificación!</strong> Tu categoría es 🟢 <strong>Bueno (⭐ ${score.toFixed(1)})</strong>. Cumples al ${met.tasa15m !== undefined ? met.tasa15m : 100}% el límite de 15 minutos, ${met.tasaPuntualidad !== undefined ? met.tasaPuntualidad : 100}% la puntualidad en sitio y alta efectividad en atención. Tienes máxima prioridad en asignación de rutas.`;
         } else if (categoria === 'Regular') {
           elConsejo.className = "p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-300 text-[11px] leading-relaxed";
-          elConsejo.innerHTML = `<strong>Atención a tu desempeño:</strong> Tu calificación actual es 🟡 <strong>Regular (⭐ ${score.toFixed(1)})</strong>. Para volver a 🟢 Bueno (≥ 4.5), acepta antes de 15 min y evita retrasos en traslados.`;
+          elConsejo.innerHTML = `<strong>Atención a tu desempeño:</strong> Tu calificación actual es 🟡 <strong>Regular (⭐ ${score.toFixed(1)})</strong>. Para volver a 🟢 Bueno (≥ 4.5), atiende tus servicios asignados, confirma antes de 15 min y evita cancelaciones o retrasos.`;
         } else {
           elConsejo.className = "p-2.5 rounded-lg bg-rose-950/30 border border-rose-500/30 text-rose-300 text-[11px] leading-relaxed";
-          elConsejo.innerHTML = `<strong>Alerta de desempeño crítico:</strong> Tu categoría es 🔴 <strong>Malo (⭐ ${score.toFixed(1)})</strong> debido a cancelaciones o demoras en traslados. Consulta a Gerencia para justificar incidencias.`;
+          elConsejo.innerHTML = `<strong>Alerta de desempeño crítico:</strong> Tu categoría es 🔴 <strong>Malo (⭐ ${score.toFixed(1)})</strong> debido a servicios cancelados o demoras en atención. Atiende los próximos servicios puntualmente para recuperar tu puntaje.`;
         }
       }
 
@@ -2777,11 +2919,15 @@
       s.fechaJustificacion = new Date().toISOString();
 
       calcularMetricasRankingPonderado(s.tecnico.id);
+      const elRanking = document.getElementById('tecCardRanking');
+      if (elRanking && s.tecnico) {
+        elRanking.innerHTML = `⭐ ${s.tecnico.ranking || '4.9'} (${s.tecnico.categoriaRanking || 'Bueno'})`;
+      }
       guardarEnAlmacenamientoLocal();
       actualizarKPIs();
       renderizarTabla();
       renderizarDashboardRankingAdmin();
-      renderizarVistaRankingTecnico();
+      renderizarVistaRankingTecnico(s.tecnico ? s.tecnico.id : null);
 
       publicarSincronizacion({
         type: 'SLA_JUSTIFIED',
@@ -5754,8 +5900,25 @@ ${linkTecnico}`;
       const elRanking = document.getElementById('tecCardRanking');
       if (elNombreTec) elNombreTec.innerText = s.tecnico ? s.tecnico.nombre : 'Sin Asignar';
       if (elRanking) {
-        const cat = (s.tecnico && s.tecnico.categoriaRanking) || calcularCategoriaRanking(s.tecnico ? s.tecnico.ranking : 4.9);
-        elRanking.innerHTML = `⭐ ${(s.tecnico && s.tecnico.ranking) || '4.9'} (${cat})`;
+        let scoreStr = '4.9';
+        let cat = 'Bueno';
+        if (s.tecnico) {
+          let tecObj = catalogoTecnicos.find(t => (s.tecnico.id && t.id === s.tecnico.id) || (t.nombre && s.tecnico.nombre && t.nombre.toLowerCase().trim() === s.tecnico.nombre.toLowerCase().trim()));
+          if (!tecObj && s.tecnico.nombre) {
+            tecObj = registrarOActualizarTecnicoDesdeDatos(s.tecnico);
+          }
+          if (tecObj) {
+            calcularMetricasRankingPonderado(tecObj.id);
+            scoreStr = tecObj.ranking;
+            cat = tecObj.categoriaRanking;
+          } else {
+            scoreStr = s.tecnico.ranking || '4.9';
+            cat = s.tecnico.categoriaRanking || calcularCategoriaRanking(scoreStr);
+          }
+          s.tecnico.ranking = scoreStr;
+          s.tecnico.categoriaRanking = cat;
+        }
+        elRanking.innerHTML = `⭐ ${scoreStr} (${cat})`;
       }
 
       const d = s.ruta ? s.ruta.destinoCoords : null;
@@ -5766,6 +5929,7 @@ ${linkTecnico}`;
 
       actualizarBannerTecnico(s.estatusTecnico, s.motivoCancelacion);
       renderizarRutaEnMapaTecnico(s);
+      renderizarVistaRankingTecnico(s.tecnico ? (s.tecnico.id || s.tecnico.nombre) : null);
     }
 
     function actualizarBannerTecnico(estatus, motivo) {
@@ -5903,12 +6067,17 @@ ${linkTecnico}`;
         calcularMetricasRankingPonderado(s.tecnico.id);
       }
 
+      const elRanking = document.getElementById('tecCardRanking');
+      if (elRanking && s.tecnico) {
+        elRanking.innerHTML = `⭐ ${s.tecnico.ranking || '4.9'} (${s.tecnico.categoriaRanking || 'Bueno'})`;
+      }
+
       guardarEnAlmacenamientoLocal();
       actualizarBannerTecnico(nuevoEstado, '');
       actualizarKPIs();
       renderizarTabla();
       renderizarDashboardRankingAdmin();
-      renderizarVistaRankingTecnico();
+      renderizarVistaRankingTecnico(s.tecnico ? s.tecnico.id : null);
       poblarSelectorTecnicosForm();
 
       publicarSincronizacion({
@@ -5972,7 +6141,7 @@ ${linkTecnico}`;
       actualizarKPIs();
       renderizarTabla();
       renderizarDashboardRankingAdmin();
-      renderizarVistaRankingTecnico();
+      renderizarVistaRankingTecnico(s.tecnico ? s.tecnico.id : null);
       poblarSelectorTecnicosForm();
 
       publicarSincronizacion({
