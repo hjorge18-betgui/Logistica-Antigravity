@@ -610,7 +610,15 @@
           class="flex-1 py-2 px-2 text-[11px] font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent flex items-center justify-center gap-1 transition"
           title="Descripción de Falla y Documentos Adjuntos">
           <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>3. Falla & Adjuntos</span>
+          <span>3. Falla</span>
+        </button>
+        <button 
+          id="tabBtnCarpetaSelfies" 
+          onclick="cambiarModoVista('carpetaSelfies')" 
+          class="flex-1 py-2 px-2 text-[11px] font-semibold text-cyan-400/90 hover:text-cyan-300 border-b-2 border-transparent hover:border-cyan-400 flex items-center justify-center gap-1 transition"
+          title="Abrir Carpeta de Selfies de Campo">
+          <i data-lucide="folder" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>4. 📁 Selfies</span>
         </button>
         <button 
           onclick="toggleSidebar()" 
@@ -888,6 +896,10 @@
           <button id="viewBtnDashboard" onclick="cambiarModoVista('dashboard')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition" title="Dashboard Operativo & Módulo de Reportes de Decisión">
             <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-indigo-400"></i>
             <span>📊 Dashboard & Reportes</span>
+          </button>
+          <button id="viewBtnCarpetaSelfies" onclick="cambiarModoVista('carpetaSelfies')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition" title="Carpeta de Evidencias: Selfies de Campo Georreferenciadas">
+            <i data-lucide="folder" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>📁 Carpeta Selfies</span>
           </button>
         </div>
 
@@ -1318,6 +1330,86 @@
                 </tbody>
               </table>
             </div>
+          </div>
+
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- PANEL: CARPETA DE SELFIES Y EVIDENCIAS DE CAMPO (ADMIN)        -->
+        <!-- ============================================================= -->
+        <div id="carpetaSelfiesSectionContainer" class="hidden flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4">
+          
+          <!-- Cabecera de Sección -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3 shrink-0">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                  <i data-lucide="folder" class="w-4 h-4"></i>
+                </span>
+                <span>📁 Carpeta de Evidencias: Selfies de Campo Georreferenciadas</span>
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Repositorio centralizado de fotografías de arribo con marca de agua digital, coordenadas GPS auditadas, distancia y cumplimiento de SLA.
+              </p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button 
+                onclick="descargarTodasLasSelfies()" 
+                class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/30 transition">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Descargar Todas</span>
+              </button>
+              <button 
+                onclick="generarSelfiesDemoEnCarpeta()" 
+                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition"
+                title="Generar ejemplos de demostración si la carpeta está vacía">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>Demo Selfies</span>
+              </button>
+              <button 
+                onclick="renderizarCarpetaSelfiesAdmin(); mostrarToast('🔄 Carpeta de selfies actualizada.');" 
+                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Actualizar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de Búsqueda, Filtros y Conteo -->
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0 text-xs shadow-sm">
+            <div class="flex items-center gap-2 w-full md:w-auto flex-1">
+              <div class="relative flex-1 max-w-md">
+                <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
+                <input 
+                  type="text" 
+                  id="carpetaSelfieFiltroTexto" 
+                  oninput="renderizarCarpetaSelfiesAdmin()" 
+                  placeholder="Buscar por Folio (#TK), Técnico, Cliente o Ciudad..." 
+                  class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+              <select 
+                id="carpetaSelfieFiltroSla" 
+                onchange="renderizarCarpetaSelfiesAdmin()" 
+                class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+                <option value="todos">Todos los SLAs</option>
+                <option value="Cumplido">🟢 SLA Cumplido</option>
+                <option value="Incumplido">🔴 SLA Incumplido</option>
+                <option value="En Riesgo">🟡 SLA En Riesgo</option>
+              </select>
+            </div>
+
+            <!-- Contador de Archivos -->
+            <div class="flex items-center gap-2 text-slate-400 shrink-0">
+              <span id="carpetaTotalSelfiesBadge" class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold font-mono">
+                0 selfies registradas
+              </span>
+            </div>
+          </div>
+
+          <!-- Cuadrícula / Galería de Archivos de Selfies -->
+          <div id="carpetaSelfiesGridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1">
+            <!-- Renderizado dinámico de tarjetas de selfies -->
           </div>
 
         </div>
@@ -1957,6 +2049,81 @@
             <span>Confirmar Llegada y Enviar WhatsApp</span>
           </button>
         </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: ENVIAR SELFIE VÍA WHATSAPP DESDE LA CARPETA ADMIN          -->
+  <!-- ================================================================= -->
+  <div id="modalEnviarSelfieWhatsApp" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 hidden" onclick="if(event.target===this)cerrarModalEnviarSelfieWhatsApp()">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-4 sm:p-5 space-y-3.5 max-h-[95vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+            <i data-lucide="message-circle" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-white flex items-center gap-1.5">
+              <span>Enviar Selfie por WhatsApp</span>
+            </h3>
+            <p class="text-[10px] text-slate-400">Reenvía la evidencia con coordenadas GPS y enlace satelital</p>
+          </div>
+        </div>
+        <button onclick="cerrarModalEnviarSelfieWhatsApp()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Vista previa miniatura de la selfie -->
+      <div class="bg-black rounded-xl overflow-hidden border border-slate-800 aspect-[16/9] flex items-center justify-center relative">
+        <img id="enviarWpSelfieThumb" src="" alt="Selfie" class="w-full h-full object-contain" />
+        <div id="enviarWpFolioBadge" class="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-cyan-300 font-bold border border-slate-800">
+          #TK-1001
+        </div>
+      </div>
+
+      <!-- Información del Servicio -->
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs space-y-1">
+        <p class="text-slate-300"><span class="text-slate-500">Técnico:</span> <strong id="enviarWpTecNombre" class="text-white">Alfredo Hernández</strong></p>
+        <p class="text-slate-300"><span class="text-slate-500">Cliente:</span> <strong id="enviarWpCliNombre" class="text-white">Grupo Modelo Mérida</strong></p>
+        <p class="text-slate-300"><span class="text-slate-500">Ubicación GPS:</span> <span id="enviarWpGpsCoords" class="font-mono text-cyan-300">20.9334, -89.5667</span></p>
+      </div>
+
+      <!-- Selector de Destinatario -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold text-slate-300">Seleccionar Destinatario:</label>
+        <select id="enviarWpDestinoSelect" onchange="actualizarNumeroDestinoWhatsApp()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:border-emerald-500 focus:outline-none">
+          <option value="central">🏢 Mesa de Control / Central (525585601910)</option>
+          <option value="cliente">👤 Cliente</option>
+          <option value="tecnico">🔧 Técnico Asignado</option>
+          <option value="otro">✏️ Otro Número de Teléfono / WhatsApp</option>
+        </select>
+
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-0.5">Número de Teléfono / WhatsApp (10 a 12 dígitos):</label>
+          <input 
+            type="tel" 
+            id="enviarWpTelefonoInput" 
+            value="525585601910" 
+            placeholder="525585601910 o 5512345678" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="pt-1 flex gap-2">
+        <button onclick="ejecutarEnvioSelfieWhatsAppModal()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/30 transition">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Enviar Foto vía WhatsApp</span>
+        </button>
+        <button onclick="descargarSelfieModalActual()" class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium border border-slate-700 flex items-center justify-center gap-1 transition" title="Bajar imagen al equipo">
+          <i data-lucide="download" class="w-4 h-4 text-cyan-400"></i>
+          <span>Bajar</span>
+        </button>
       </div>
 
     </div>
@@ -3703,7 +3870,7 @@
       document.body.removeChild(a);
     }
 
-    function confirmarLlegadaSitioYEnviarWhatsApp() {
+    async function confirmarLlegadaSitioYEnviarWhatsApp() {
       if (!evidenciaSelfieTemporal) {
         alert('⚠️ Debes capturar la selfie georreferenciada antes de confirmar tu arribo en sitio.');
         return;
@@ -3732,14 +3899,99 @@
       // Transición formal de estatus a 'Llegó'
       cambiarEstadoDesdeTecnico('Llegó');
 
-      // Preparar y enviar mensaje estructurado por WhatsApp a la mesa de control / despacho
+      // Compartir y Enviar Selfie por WhatsApp
+      await compartirOEnviarSelfieWhatsApp(s.id, '525585601910');
+
+      guardarEnAlmacenamientoLocal();
+      renderizarCarpetaSelfiesAdmin();
+    }
+
+    /**
+     * =========================================================================
+     * UTILIDADES DE IMAGEN Y ENVÍO DE SELFIES VÍA WHATSAPP / CARPETA ADMIN
+     * =========================================================================
+     */
+    let servicioAEnviarSelfieId = null;
+
+    function dataUrlToBlob(dataUrl) {
+      if (!dataUrl || !dataUrl.includes(',')) return null;
+      try {
+        const parts = dataUrl.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+      } catch (err) {
+        console.warn('Error convirtiendo DataUrl a Blob:', err);
+        return null;
+      }
+    }
+
+    function descargarSelfieArchivo(dataUrl, nombreArchivo) {
+      if (!dataUrl) return;
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = nombreArchivo || `BetGui_Selfie_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function descargarTodasLasSelfies() {
+      const serviciosConSelfie = (appState.servicios || []).filter(s => !s.eliminada && s.evidenciaLlegada && s.evidenciaLlegada.dataUrl);
+      if (serviciosConSelfie.length === 0) {
+        alert('No hay selfies registradas en la carpeta para descargar.');
+        return;
+      }
+
+      serviciosConSelfie.forEach((s, idx) => {
+        setTimeout(() => {
+          const tecNomLimpio = (s.tecnico?.nombre || 'Tecnico').replace(/\s+/g, '_');
+          descargarSelfieArchivo(s.evidenciaLlegada.dataUrl, `BetGui_Selfie_${s.id}_${tecNomLimpio}.jpg`);
+        }, idx * 250);
+      });
+
+      mostrarToast(`📥 Descargando lote de ${serviciosConSelfie.length} selfies de campo al equipo...`);
+    }
+
+    async function copiarImagenAlPortapapeles(dataUrl) {
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          const blob = dataUrlToBlob(dataUrl);
+          if (blob) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ [blob.type]: blob })
+            ]);
+            console.log('Imagen copiada exitosamente al portapapeles.');
+          }
+        }
+      } catch (err) {
+        console.warn('Portapapeles directo no soportado para blobs:', err);
+      }
+    }
+
+    async function compartirOEnviarSelfieWhatsApp(servicioId, telefonoDestino) {
+      const s = appState.servicios.find(item => item.id === servicioId);
+      if (!s || !s.evidenciaLlegada || !s.evidenciaLlegada.dataUrl) {
+        alert('No se encontró la selfie georreferenciada para este servicio.');
+        return;
+      }
+
+      const ev = s.evidenciaLlegada;
       const tec = s.tecnico || {};
       const cli = s.cliente || {};
-      const ev = s.evidenciaLlegada;
       const rankingStr = tec.ranking ? `⭐ ${tec.ranking}` : '⭐ 5.0';
       const catStr = tec.categoriaRanking ? `(${tec.categoriaRanking})` : '(Excelente)';
       const durTraslado = (s.tiemposMinutos && s.tiemposMinutos.traslado) ? `${s.tiemposMinutos.traslado} min` : '25 min';
       const durTotalSla = (s.tiemposMinutos && s.tiemposMinutos.tiempoTotalHastaSitio) ? `${s.tiemposMinutos.tiempoTotalHastaSitio} min` : durTraslado;
+      let tel = telefonoDestino || '525585601910';
+      tel = tel.replace(/\D/g, '');
+      if (tel.length === 10) tel = '52' + tel;
 
       const mensajeWhatsApp = 
 `📸 *BET-GUI LOGÍSTICA | CHECK-IN DE ARRIBO EN SITIO*
@@ -3751,18 +4003,357 @@
 ⏱️ *SLA:* ${s.sla ? s.sla.nivel : '1h'} (${s.sla ? s.sla.estatus : 'Cumplido'})
 ⏳ *TIEMPO DESDE ACEPTACIÓN:* ${durTotalSla} (Traslado: ${durTraslado})
 ━━━━━━━━━━━━━━━━━━━━━
-📍 *COORDENADAS GPS:* ${ev.gps.lat}, ${ev.gps.lng} (±${ev.gps.precisionMetros}m)
-📏 *DISTANCIA AL CLIENTE:* ${ev.distanciaStr}
-🗺️ *VERIFICAR EN MAPA:* ${ev.mapsUrl}
+📍 *COORDENADAS GPS:* ${ev.gps ? `${ev.gps.lat}, ${ev.gps.lng} (±${ev.gps.precisionMetros}m)` : 'En Sitio'}
+📏 *DISTANCIA AL CLIENTE:* ${ev.distanciaStr || 'En Sitio (< 50m)'}
+🗺️ *VERIFICAR EN MAPA:* ${ev.mapsUrl || `https://www.google.com/maps?q=${ev.gps ? `${ev.gps.lat},${ev.gps.lng}` : ''}`}
 ━━━━━━━━━━━━━━━━━━━━━
 ✅ *ESTATUS CONFIRMADO:* El técnico está físicamente en sitio. Selfie frontal sellada y georreferenciada capturada con éxito.`;
 
-      const telCentral = '525585601910';
-      const wpUrl = `https://api.whatsapp.com/send?phone=${telCentral}&text=${encodeURIComponent(mensajeWhatsApp)}`;
-      window.open(wpUrl, '_blank');
+      // 1. Descargar archivo al equipo
+      descargarSelfieArchivo(ev.dataUrl, `BetGui_Selfie_CheckIn_${s.id}.jpg`);
 
-      mostrarToast(`✅ Arribo confirmado en Folio #${s.id}. Selfie georreferenciada guardada y enviada a Despacho.`);
+      // 2. Intentar copiar al portapapeles
+      copiarImagenAlPortapapeles(ev.dataUrl);
+
+      // 3. Web Share API con archivo JPEG adjunto
+      const blob = dataUrlToBlob(ev.dataUrl);
+      if (blob && navigator.canShare) {
+        const archivoFoto = new File([blob], `BetGui_Selfie_${s.id}.jpg`, { type: 'image/jpeg' });
+        if (navigator.canShare({ files: [archivoFoto] })) {
+          try {
+            await navigator.share({
+              files: [archivoFoto],
+              title: `Selfie Check-in Folio #${s.id}`,
+              text: mensajeWhatsApp
+            });
+            mostrarToast(`✅ Selfie compartida vía WhatsApp exitosamente.`);
+            return;
+          } catch(e) {
+            if (e.name !== 'AbortError') console.warn('Web Share omitido:', e);
+          }
+        }
+      }
+
+      // 4. Redirección a WhatsApp Web / App
+      const wpUrl = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensajeWhatsApp)}`;
+      window.open(wpUrl, '_blank');
+      mostrarToast(`📸 Selfie descargada y copiada al portapapeles. En WhatsApp presiona Pegar (Ctrl+V) para enviar la foto.`);
+    }
+
+    function abrirModalEnviarSelfieWhatsApp(id) {
+      const s = appState.servicios.find(item => item.id === id);
+      if (!s || !s.evidenciaLlegada || !s.evidenciaLlegada.dataUrl) {
+        alert('Este servicio no cuenta con selfie georreferenciada.');
+        return;
+      }
+
+      servicioAEnviarSelfieId = s.id;
+      const ev = s.evidenciaLlegada;
+
+      const modal = document.getElementById('modalEnviarSelfieWhatsApp');
+      const img = document.getElementById('enviarWpSelfieThumb');
+      const badge = document.getElementById('enviarWpFolioBadge');
+      const tecTxt = document.getElementById('enviarWpTecNombre');
+      const cliTxt = document.getElementById('enviarWpCliNombre');
+      const gpsTxt = document.getElementById('enviarWpGpsCoords');
+      const selDest = document.getElementById('enviarWpDestinoSelect');
+      const inTel = document.getElementById('enviarWpTelefonoInput');
+
+      if (img) img.src = ev.dataUrl;
+      if (badge) badge.innerText = `#${s.id}`;
+      if (tecTxt) tecTxt.innerText = `${s.tecnico?.nombre || 'Técnico'} (⭐ ${s.tecnico?.ranking || '5.0'})`;
+      if (cliTxt) cliTxt.innerText = `${s.cliente?.nombre || 'Cliente'} - ${s.cliente?.ciudad || ''}`;
+      if (gpsTxt) gpsTxt.innerText = ev.gps ? `${ev.gps.lat}, ${ev.gps.lng} (${ev.distanciaStr || 'En Sitio'})` : 'En Sitio';
+
+      if (selDest) selDest.value = 'central';
+      if (inTel) inTel.value = '525585601910';
+
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function cerrarModalEnviarSelfieWhatsApp() {
+      const modal = document.getElementById('modalEnviarSelfieWhatsApp');
+      if (modal) modal.classList.add('hidden');
+      servicioAEnviarSelfieId = null;
+    }
+
+    function actualizarNumeroDestinoWhatsApp() {
+      const sel = document.getElementById('enviarWpDestinoSelect');
+      const inputTel = document.getElementById('enviarWpTelefonoInput');
+      if (!sel || !inputTel) return;
+
+      const s = appState.servicios.find(item => item.id === servicioAEnviarSelfieId);
+      if (!s) return;
+
+      if (sel.value === 'central') {
+        inputTel.value = '525585601910';
+      } else if (sel.value === 'cliente') {
+        inputTel.value = (s.cliente && s.cliente.telefono) ? s.cliente.telefono.replace(/\D/g, '') : '525585601910';
+      } else if (sel.value === 'tecnico') {
+        inputTel.value = (s.tecnico && s.tecnico.telefono) ? s.tecnico.telefono.replace(/\D/g, '') : '525585601910';
+      } else {
+        inputTel.value = '';
+        inputTel.focus();
+      }
+    }
+
+    function descargarSelfieModalActual() {
+      if (!servicioAEnviarSelfieId) return;
+      const s = appState.servicios.find(item => item.id === servicioAEnviarSelfieId);
+      if (s && s.evidenciaLlegada && s.evidenciaLlegada.dataUrl) {
+        descargarSelfieArchivo(s.evidenciaLlegada.dataUrl, `BetGui_Selfie_CheckIn_${s.id}.jpg`);
+      }
+    }
+
+    async function ejecutarEnvioSelfieWhatsAppModal() {
+      if (!servicioAEnviarSelfieId) return;
+      const inTel = document.getElementById('enviarWpTelefonoInput');
+      const tel = inTel ? inTel.value.trim() : '525585601910';
+      if (!tel) {
+        alert('Por favor ingresa un número telefónico de WhatsApp.');
+        return;
+      }
+      cerrarModalEnviarSelfieWhatsApp();
+      await compartirOEnviarSelfieWhatsApp(servicioAEnviarSelfieId, tel);
+    }
+
+    function renderizarCarpetaSelfiesAdmin() {
+      const grid = document.getElementById('carpetaSelfiesGridContainer');
+      const countBadge = document.getElementById('carpetaTotalSelfiesBadge');
+      const txtFilter = (document.getElementById('carpetaSelfieFiltroTexto')?.value || '').toLowerCase().trim();
+      const slaFilter = document.getElementById('carpetaSelfieFiltroSla')?.value || 'todos';
+
+      if (!grid) return;
+
+      let serviciosConSelfie = (appState.servicios || []).filter(s => 
+        !s.eliminada && s.evidenciaLlegada && s.evidenciaLlegada.dataUrl
+      );
+
+      if (txtFilter) {
+        serviciosConSelfie = serviciosConSelfie.filter(s => {
+          const idMatch = s.id && s.id.toLowerCase().includes(txtFilter);
+          const tecMatch = s.tecnico && s.tecnico.nombre && s.tecnico.nombre.toLowerCase().includes(txtFilter);
+          const cliMatch = s.cliente && s.cliente.nombre && s.cliente.nombre.toLowerCase().includes(txtFilter);
+          const cdMatch = s.cliente && s.cliente.ciudad && s.cliente.ciudad.toLowerCase().includes(txtFilter);
+          return idMatch || tecMatch || cliMatch || cdMatch;
+        });
+      }
+
+      if (slaFilter !== 'todos') {
+        serviciosConSelfie = serviciosConSelfie.filter(s => s.sla && s.sla.estatus === slaFilter);
+      }
+
+      if (countBadge) {
+        countBadge.innerText = `${serviciosConSelfie.length} ${serviciosConSelfie.length === 1 ? 'selfie registrada' : 'selfies registradas'}`;
+      }
+
+      if (serviciosConSelfie.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-16 flex flex-col items-center justify-center text-center space-y-3 bg-slate-950/60 rounded-2xl border border-slate-800 border-dashed p-6">
+            <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+              <i data-lucide="folder-search" class="w-7 h-7"></i>
+            </div>
+            <div class="max-w-md">
+              <p class="font-bold text-slate-200 text-sm">No hay selfies en la carpeta que coincidan con la búsqueda.</p>
+              <p class="text-xs text-slate-400 mt-1">
+                Cuando los técnicos en campo opriman <strong>"Llegué al Sitio"</strong> y sellen su selfie frontal georreferenciada, se guardarán automáticamente en esta carpeta con sus coordenadas GPS y comprobante de SLA.
+              </p>
+            </div>
+            <button onclick="generarSelfiesDemoEnCarpeta()" class="mt-2 px-3 py-2 bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white rounded-xl text-xs font-bold border border-cyan-500/30 flex items-center gap-1.5 transition">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Cargar Ejemplos de Selfies Selladas</span>
+            </button>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      grid.innerHTML = serviciosConSelfie.map(s => {
+        const ev = s.evidenciaLlegada;
+        const tec = s.tecnico || {};
+        const cli = s.cliente || {};
+        const sla = s.sla || { nivel: '1h', estatus: 'Cumplido' };
+        const slaBadgeColor = sla.estatus === 'Incumplido' ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : (sla.estatus === 'En Riesgo' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30');
+
+        const gpsLat = (ev.gps && ev.gps.lat) ? ev.gps.lat : (s.ruta?.destinoCoords?.lat || 19.4326);
+        const gpsLng = (ev.gps && ev.gps.lng) ? ev.gps.lng : (s.ruta?.destinoCoords?.lng || -99.1332);
+        const mapsLink = ev.mapsUrl || `https://www.google.com/maps?q=${gpsLat},${gpsLng}`;
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-3 flex flex-col justify-between space-y-2.5 shadow-lg transition group">
+            
+            <div class="flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="p-1 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shrink-0">
+                  <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                </span>
+                <span class="font-mono font-bold text-xs text-indigo-400 truncate">#${s.id}</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${slaBadgeColor} shrink-0">
+                ${sla.nivel}: ${sla.estatus}
+              </span>
+            </div>
+
+            <div class="relative bg-black rounded-xl overflow-hidden border border-slate-800 aspect-[4/3] cursor-pointer group/img" onclick="verEvidenciaCheckin('${s.id}')">
+              <img src="${ev.dataUrl}" alt="Selfie Folio #${s.id}" class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300" />
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent opacity-80 group-hover/img:opacity-90 transition"></div>
+              
+              <div class="absolute bottom-1.5 left-2 right-2 flex items-center justify-between text-[10px] text-white">
+                <span class="flex items-center gap-1 truncate font-mono text-cyan-300">
+                  <i data-lucide="map-pin" class="w-3 h-3 text-cyan-400"></i>
+                  <span>${typeof gpsLat === 'number' ? gpsLat.toFixed(4) : gpsLat}, ${typeof gpsLng === 'number' ? gpsLng.toFixed(4) : gpsLng}</span>
+                </span>
+                <span class="text-[9px] bg-slate-950/80 px-1.5 py-0.5 rounded text-slate-300 border border-slate-800">
+                  ${ev.distanciaStr || 'En Sitio'}
+                </span>
+              </div>
+
+              <div class="absolute top-2 right-2 bg-slate-950/80 p-1 rounded-lg text-slate-300 opacity-0 group-hover/img:opacity-100 transition shadow">
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+
+            <div class="space-y-1 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-white truncate max-w-[170px]" title="${tec.nombre}">${tec.nombre}</span>
+                <span class="text-amber-400 text-[10px] font-bold shrink-0">⭐ ${tec.ranking || '5.0'}</span>
+              </div>
+              <p class="text-[11px] text-slate-300 truncate" title="${cli.nombre}">${cli.nombre}</p>
+              <p class="text-[10px] text-slate-400 truncate">📍 ${cli.ciudad || 'Sitio'} · ${ev.fechaHora || 'Hoy'}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-800/80">
+              <button 
+                onclick="descargarSelfieArchivo('${ev.dataUrl}', 'BetGui_Selfie_${s.id}.jpg')" 
+                class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1 transition shadow"
+                title="Bajar foto sellada al equipo">
+                <i data-lucide="download" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Bajar</span>
+              </button>
+              
+              <button 
+                onclick="abrirModalEnviarSelfieWhatsApp('${s.id}')" 
+                class="py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition shadow shadow-emerald-600/30"
+                title="Enviar selfie y reporte georreferenciado por WhatsApp">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Enviar</span>
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function generarSelfiesDemoEnCarpeta() {
+      let serviciosActivos = (appState.servicios || []).filter(s => !s.eliminada);
+      if (serviciosActivos.length === 0) {
+        cargarCasosPrueba();
+        serviciosActivos = (appState.servicios || []).filter(s => !s.eliminada);
+      }
+
+      const targetServicios = serviciosActivos.slice(0, 3);
+      let creadas = 0;
+
+      targetServicios.forEach((s, idx) => {
+        if (!s.evidenciaLlegada || !s.evidenciaLlegada.dataUrl) {
+          const canvas = document.createElement('canvas');
+          canvas.width = 640;
+          canvas.height = 480;
+          const ctx = canvas.getContext('2d');
+
+          const grad = ctx.createLinearGradient(0, 0, 640, 480);
+          grad.addColorStop(0, '#0f172a');
+          grad.addColorStop(0.5, '#1e293b');
+          grad.addColorStop(1, '#020617');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 640, 480);
+
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.arc(320, 180, 70, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(320, 330, 120, 80, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(300, 270, 40, 50);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px monospace';
+          ctx.fillText('ID TEC', 305, 290);
+
+          const bannerH = 135;
+          const bannerY = 480 - bannerH;
+          ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
+          ctx.fillRect(0, bannerY, 640, bannerH);
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(0, bannerY, 640, 3);
+
+          ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+          ctx.fillRect(400, 15, 225, 28);
+          ctx.strokeStyle = '#06b6d4';
+          ctx.strokeRect(400, 15, 225, 28);
+          ctx.fillStyle = '#22d3ee';
+          ctx.font = 'bold 11px monospace';
+          ctx.fillText('🛡️ CHECK-IN EN SITIO BET-GUI', 410, 33);
+
+          const padX = 18;
+          let textY = bannerY + 22;
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillText(`BET-GUI LOGÍSTICA | ARRIBO GEOREFERENCIADO EN SITIO`, padX, textY);
+
+          textY += 20;
+          ctx.font = 'bold 12px sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(`FOLIO: #${s.id}  |  TÉCNICO: ${s.tecnico ? s.tecnico.nombre : 'Técnico'} (⭐ ${s.tecnico ? s.tecnico.ranking || '5.0' : '5.0'})`, padX, textY);
+
+          textY += 19;
+          ctx.font = 'normal 11px sans-serif';
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText(`CLIENTE: ${s.cliente ? s.cliente.nombre : 'Cliente'} - ${s.cliente ? s.cliente.ciudad : 'CDMX'}`, padX, textY);
+
+          textY += 19;
+          ctx.font = 'bold 11px monospace';
+          ctx.fillStyle = '#34d399';
+          const lat = s.ruta?.destinoCoords?.lat || (20.967 + idx * 0.01);
+          const lng = s.ruta?.destinoCoords?.lng || (-89.623 - idx * 0.01);
+          ctx.fillText(`GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)} (±10m)  |  DISTANCIA: 15 m (En Sitio)`, padX, textY);
+
+          textY += 19;
+          ctx.font = 'normal 11px sans-serif';
+          ctx.fillStyle = '#94a3b8';
+          const ahora = new Date();
+          ctx.fillText(`FECHA/HORA: ${ahora.toLocaleDateString('es-MX')} ${ahora.toLocaleTimeString('es-MX')}  |  SLA: ${s.sla?.nivel || '1h'} (${s.sla?.estatus || 'Cumplido'})`, padX, textY);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          s.evidenciaLlegada = {
+            dataUrl,
+            folio: s.id,
+            tecnico: s.tecnico ? s.tecnico.nombre : 'Técnico',
+            cliente: s.cliente ? s.cliente.nombre : 'Cliente',
+            gps: { lat, lng, precisionMetros: 10 },
+            distanciaStr: '15 m (En Sitio)',
+            fechaHora: `${ahora.toLocaleDateString('es-MX')} ${ahora.toLocaleTimeString('es-MX')}`,
+            tiempoMinutos: 22,
+            slaNivel: s.sla?.nivel || '1h',
+            slaEstatus: s.sla?.estatus || 'Cumplido',
+            mapsUrl: `https://www.google.com/maps?q=${lat},${lng}`,
+            timestamp: Date.now()
+          };
+          creadas++;
+        }
+      });
+
       guardarEnAlmacenamientoLocal();
+      renderizarTabla();
+      renderizarCarpetaSelfiesAdmin();
+      mostrarToast(`📁 Se cargaron ${creadas} selfies selladas de ejemplo en la carpeta.`);
     }
 
     function verEvidenciaCheckin(id) {
@@ -7035,11 +7626,13 @@ ${linkTecnico}`;
       const tableCont = document.getElementById('tableSectionContainer');
       const rankingCont = document.getElementById('rankingSectionContainer');
       const dashboardCont = document.getElementById('dashboardSectionContainer');
+      const carpetaCont = document.getElementById('carpetaSelfiesSectionContainer');
       const bSplit = document.getElementById('viewBtnSplit');
       const bMap = document.getElementById('viewBtnMap');
       const bTable = document.getElementById('viewBtnTable');
       const bRanking = document.getElementById('viewBtnRanking');
       const bDashboard = document.getElementById('viewBtnDashboard');
+      const bCarpeta = document.getElementById('viewBtnCarpetaSelfies');
 
       const inactiveBtn = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
       const activeBtn = "px-2.5 py-1 rounded bg-indigo-600 text-white font-medium flex items-center gap-1 transition";
@@ -7049,6 +7642,7 @@ ${linkTecnico}`;
       if (bTable) bTable.className = inactiveBtn;
       if (bRanking) bRanking.className = inactiveBtn;
       if (bDashboard) bDashboard.className = inactiveBtn;
+      if (bCarpeta) bCarpeta.className = inactiveBtn;
 
       if (modo === 'split') {
         if (bSplit) bSplit.className = activeBtn;
@@ -7062,6 +7656,7 @@ ${linkTecnico}`;
         }
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (carpetaCont) carpetaCont.classList.add('hidden');
       } else if (modo === 'map') {
         if (bMap) bMap.className = activeBtn;
         if (mapCont) {
@@ -7071,6 +7666,7 @@ ${linkTecnico}`;
         if (tableCont) tableCont.classList.add('hidden');
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (carpetaCont) carpetaCont.classList.add('hidden');
       } else if (modo === 'table') {
         if (bTable) bTable.className = activeBtn;
         if (mapCont) mapCont.classList.add('hidden');
@@ -7080,11 +7676,13 @@ ${linkTecnico}`;
         }
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (carpetaCont) carpetaCont.classList.add('hidden');
       } else if (modo === 'ranking') {
         if (bRanking) bRanking.className = activeBtn;
         if (mapCont) mapCont.classList.add('hidden');
         if (tableCont) tableCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (carpetaCont) carpetaCont.classList.add('hidden');
         if (rankingCont) {
           rankingCont.classList.remove('hidden');
           rankingCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
@@ -7095,11 +7693,23 @@ ${linkTecnico}`;
         if (mapCont) mapCont.classList.add('hidden');
         if (tableCont) tableCont.classList.add('hidden');
         if (rankingCont) rankingCont.classList.add('hidden');
+        if (carpetaCont) carpetaCont.classList.add('hidden');
         if (dashboardCont) {
           dashboardCont.classList.remove('hidden');
           dashboardCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
         }
         renderizarDashboardDecisiones();
+      } else if (modo === 'carpetaSelfies') {
+        if (bCarpeta) bCarpeta.className = "px-2.5 py-1 rounded bg-cyan-600 text-white font-medium flex items-center gap-1 transition shadow-lg shadow-cyan-600/30";
+        if (mapCont) mapCont.classList.add('hidden');
+        if (tableCont) tableCont.classList.add('hidden');
+        if (rankingCont) rankingCont.classList.add('hidden');
+        if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (carpetaCont) {
+          carpetaCont.classList.remove('hidden');
+          carpetaCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
+        }
+        renderizarCarpetaSelfiesAdmin();
       }
 
       setTimeout(() => {
