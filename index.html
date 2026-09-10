@@ -668,7 +668,7 @@
               </div>
               <div>
                 <label class="block text-slate-400 text-[10px] mb-0.5">Ciudad</label>
-                <select id="cliCiudad" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500">
+                <select id="cliCiudad" onchange="alSeleccionarCiudadOColonia('cli')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500">
                   <option value="">Seleccionar...</option>
                 </select>
               </div>
@@ -720,7 +720,7 @@
               </div>
               <div>
                 <label class="block text-slate-400 text-[10px] mb-0.5">Ciudad Origen</label>
-                <select id="tecCiudad" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-emerald-500">
+                <select id="tecCiudad" onchange="alSeleccionarCiudadOColonia('tec')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-emerald-500">
                   <option value="">Seleccionar...</option>
                 </select>
               </div>
@@ -4209,20 +4209,25 @@
       mostrarToast('📍 Geocodificando direcciones y calculando ruta vial real...');
 
       try {
+        const tecSelOpt = document.getElementById('tecCiudad')?.selectedOptions?.[0];
+        const cliSelOpt = document.getElementById('cliCiudad')?.selectedOptions?.[0];
+
         const oCoords = await geocodificarDireccionCompleta({
           calleNumero: tecDir,
-          colonia: '',
+          colonia: tecSelOpt?.dataset?.colonia || '',
           cp: tecCp,
           ciudad: tecCd,
-          estado: tecEstado
+          estado: tecEstado,
+          municipioSugerido: tecSelOpt?.dataset?.municipio || ''
         });
 
         const dCoords = await geocodificarDireccionCompleta({
           calleNumero: cliDir,
-          colonia: '',
+          colonia: cliSelOpt?.dataset?.colonia || '',
           cp: cliCp,
           ciudad: cliCd,
-          estado: cliEstado
+          estado: cliEstado,
+          municipioSugerido: cliSelOpt?.dataset?.municipio || ''
         });
 
         const ruta = await resolverRutaVialReal(oCoords.lat, oCoords.lng, dCoords.lat, dCoords.lng);
@@ -4233,7 +4238,7 @@
         const tecReg = registrarOActualizarTecnicoDesdeDatos({
           nombre: tecNombre,
           direccion: tecDir,
-          ciudad: tecCd,
+          ciudad: limpiarTextoUbicacion(tecCd),
           estado: tecEstado,
           cp: tecCp,
           telefono: tecTel
@@ -4385,6 +4390,14 @@
       appState.markersGroupAdmin.clearLayers();
       if (appState.routePolylineAdmin) appState.leafletMapAdmin.removeLayer(appState.routePolylineAdmin);
       if (appState.routeHaloAdmin) appState.leafletMapAdmin.removeLayer(appState.routeHaloAdmin);
+      if (appState._previewTecMarker) {
+        appState.leafletMapAdmin.removeLayer(appState._previewTecMarker);
+        appState._previewTecMarker = null;
+      }
+      if (appState._previewCliMarker) {
+        appState.leafletMapAdmin.removeLayer(appState._previewCliMarker);
+        appState._previewCliMarker = null;
+      }
 
       const o = serv.ruta.origenCoords;
       const d = serv.ruta.destinoCoords;
@@ -6314,6 +6327,48 @@ ${linkTecnico}`;
       return estRaw;
     }
 
+    /**
+     * SANITIZACIÓN DE CADENAS DE UBICACIÓN (Elimina emojis, prefijos [CP...], [Capital], etc.)
+     */
+    function limpiarTextoUbicacion(txt) {
+      if (!txt || typeof txt !== 'string') return '';
+      return txt
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1FA00}-\u{1FAFF}]/gu, '')
+        .replace(/\[CP\s*\d+\]/gi, '')
+        .replace(/\[Capital\]/gi, '')
+        .replace(/\[Municipio[^\]]*\]/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    /**
+     * VALIDADOR ESTRICTO DE RESULTADOS NOMINATIM / OSM
+     * Evita falsos positivos como saltar a Chalco (56650) cuando se busca Metepec (52172).
+     */
+    function validarResultadoGeocodificacion(item, cpClean, estClean) {
+      if (!item) return false;
+      const addr = item.address || {};
+      // 1. Validar coincidencia de Estado
+      if (estClean && addr.state) {
+        const cleanEst = estClean.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const addrEst = addr.state.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        if (!addrEst.includes(cleanEst) && !cleanEst.includes(addrEst)) {
+          return false;
+        }
+      }
+      // 2. Validar Código Postal (rechazar si los 2 primeros dígitos no coinciden)
+      if (cpClean && cpClean.length === 5 && addr.postcode) {
+        const resCp = addr.postcode.replace(/\D/g, '');
+        if (resCp && resCp.length >= 2 && resCp.slice(0, 2) !== cpClean.slice(0, 2)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * CONSULTA INTELIGENTE DE CÓDIGO POSTAL CON DETECCIÓN DE MUNICIPIO Y ASENTAMIENTOS
+     */
     async function consultarCodigoPostal(tipoForm) {
       const idCp = tipoForm === 'cli' ? 'cliCp' : 'tecCp';
       const idEstado = tipoForm === 'cli' ? 'cliEstado' : 'tecEstado';
@@ -6330,65 +6385,97 @@ ${linkTecnico}`;
       mostrarToast(`🔍 Consultando catálogo postal para CP ${cp}...`);
 
       let estadoEncontrado = '';
-      let ciudadEncontrada = '';
+      let municipioOficial = '';
       let lugares = [];
+      let coordsCpOficial = null;
 
+      // 1. Consulta estructurada a OpenStreetMap Nominatim para obtener Municipio, Estado y Centroide Oficial
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        const res = await fetch(`https://api.zippopotam.us/mx/${cp}`, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const resNom = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${cp}&country=mexico&format=json&addressdetails=1&limit=1`, {
+          headers: { 'User-Agent': 'BetGuiLogistics/1.0' },
+          signal: controller.signal
+        });
         clearTimeout(timeoutId);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.places && data.places.length > 0) {
-            estadoEncontrado = data.places[0].state || '';
-            ciudadEncontrada = data.places[0]['place name'] || '';
-            lugares = data.places.map(p => p['place name']).filter(Boolean);
+        if (resNom.ok) {
+          const dataNom = await resNom.json();
+          if (Array.isArray(dataNom) && dataNom.length > 0) {
+            const addr = dataNom[0].address || {};
+            estadoEncontrado = addr.state || '';
+            municipioOficial = addr.county || addr.city || addr.town || addr.municipality || '';
+            if (dataNom[0].lat && dataNom[0].lon) {
+              coordsCpOficial = {
+                lat: parseFloat(dataNom[0].lat),
+                lng: parseFloat(dataNom[0].lon)
+              };
+            }
           }
         }
       } catch(e) {}
 
-      if (!estadoEncontrado) {
-        try {
-          const controller2 = new AbortController();
-          const timeoutId2 = setTimeout(() => controller2.abort(), 2500);
-          const res2 = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${cp}&country=mexico&format=json&addressdetails=1&limit=1`, {
-            headers: { 'User-Agent': 'BetGuiLogistics/1.0' },
-            signal: controller2.signal
-          });
-          clearTimeout(timeoutId2);
-          if (res2.ok) {
-            const data2 = await res2.json();
-            if (Array.isArray(data2) && data2.length > 0 && data2[0].address) {
-              estadoEncontrado = data2[0].address.state || '';
-              ciudadEncontrada = data2[0].address.city || data2[0].address.municipality || data2[0].address.town || data2[0].address.county || '';
-              if (ciudadEncontrada) lugares = [ciudadEncontrada];
-            }
+      // 2. Consulta a Zippopotam para obtener colonias / asentamientos de este CP
+      try {
+        const controllerZip = new AbortController();
+        const timeoutIdZip = setTimeout(() => controllerZip.abort(), 2500);
+        const resZip = await fetch(`https://api.zippopotam.us/mx/${cp}`, { signal: controllerZip.signal });
+        clearTimeout(timeoutIdZip);
+        if (resZip.ok) {
+          const dataZip = await resZip.json();
+          if (dataZip && dataZip.places && dataZip.places.length > 0) {
+            if (!estadoEncontrado) estadoEncontrado = dataZip.places[0].state || '';
+            lugares = dataZip.places.map(p => p['place name']).filter(Boolean);
           }
-        } catch(e) {}
-      }
+        }
+      } catch(e) {}
 
+      // 3. Fallback con Diccionario Postal si falta municipio o estado
       const prefijo = cp.substring(0, 2);
-      if ((!estadoEncontrado || !ciudadEncontrada) && DICCIONARIO_CP_ESTADOS_MEX[prefijo]) {
+      if ((!estadoEncontrado || !municipioOficial) && DICCIONARIO_CP_ESTADOS_MEX[prefijo]) {
         const fallback = DICCIONARIO_CP_ESTADOS_MEX[prefijo];
         if (!estadoEncontrado) estadoEncontrado = fallback.estado;
-        if (!ciudadEncontrada) ciudadEncontrada = fallback.ciudad;
-        if (lugares.length === 0) lugares = [fallback.ciudad];
+        if (!municipioOficial) municipioOficial = fallback.ciudad;
       }
 
-      if (!estadoEncontrado && !ciudadEncontrada) {
+      if (!estadoEncontrado && !municipioOficial && lugares.length === 0) {
         mostrarToast(`⚠️ No se encontraron datos para el CP ${cp}. Ingresa estado y municipio manualmente.`);
         return;
       }
 
       const estadoNormalizado = normalizarNombreEstado(estadoEncontrado);
 
+      // Si no hay coordenadas de Nominatim, usar centroide del catálogo base
+      if (!coordsCpOficial && estadoNormalizado && CATALOGO_MEXICO[estadoNormalizado]) {
+        coordsCpOficial = {
+          lat: CATALOGO_MEXICO[estadoNormalizado].lat,
+          lng: CATALOGO_MEXICO[estadoNormalizado].lng
+        };
+      }
+
+      // Actualizar select de Estado
       if (selectEstado && estadoNormalizado) {
         selectEstado.value = estadoNormalizado;
         actualizarCiudades(idEstado, idCiudad);
       }
 
+      // Actualizar select de Ciudad / Colonia con metadatos precisos
       if (selectCiudad) {
+        // A. Añadir la opción del Municipio Oficial detectado para el CP
+        if (municipioOficial) {
+          const optMuni = document.createElement('option');
+          optMuni.value = municipioOficial;
+          optMuni.textContent = `🏛️ [Municipio CP ${cp}] ${municipioOficial}`;
+          optMuni.className = 'text-emerald-400 font-bold bg-slate-900';
+          optMuni.dataset.municipio = municipioOficial;
+          optMuni.dataset.cp = cp;
+          if (coordsCpOficial) {
+            optMuni.dataset.lat = coordsCpOficial.lat;
+            optMuni.dataset.lng = coordsCpOficial.lng;
+          }
+          selectCiudad.insertBefore(optMuni, selectCiudad.firstChild.nextSibling);
+        }
+
+        // B. Añadir las colonias correspondientes al CP
         lugares.forEach(lugar => {
           let yaExiste = false;
           for (let i = 0; i < selectCiudad.options.length; i++) {
@@ -6402,103 +6489,242 @@ ${linkTecnico}`;
             opt.value = lugar;
             opt.textContent = `📍 [CP ${cp}] ${lugar}`;
             opt.className = 'text-indigo-300 font-semibold bg-slate-900';
+            opt.dataset.municipio = municipioOficial || estadoNormalizado;
+            opt.dataset.colonia = lugar;
+            opt.dataset.cp = cp;
+            if (coordsCpOficial) {
+              opt.dataset.lat = coordsCpOficial.lat;
+              opt.dataset.lng = coordsCpOficial.lng;
+            }
             selectCiudad.insertBefore(opt, selectCiudad.firstChild.nextSibling);
           }
         });
 
-        for (let i = 0; i < selectCiudad.options.length; i++) {
-          const val = selectCiudad.options[i].value.toLowerCase().trim();
-          if (ciudadEncontrada && (val.includes(ciudadEncontrada.toLowerCase().trim()) || ciudadEncontrada.toLowerCase().trim().includes(val))) {
-            selectCiudad.selectedIndex = i;
-            break;
-          }
+        // Seleccionar la primera opción insertada
+        if (selectCiudad.options.length > 1) {
+          selectCiudad.selectedIndex = 1;
         }
+
+        // Disparar sincronización inmediata en mapa
+        alSeleccionarCiudadOColonia(tipoForm);
       }
 
-      mostrarToast(`✅ CP ${cp}: ${ciudadEncontrada || 'Municipio detectado'}, ${estadoNormalizado || estadoEncontrado}`);
+      mostrarToast(`✅ CP ${cp}: ${municipioOficial || 'Municipio detectado'}, ${estadoNormalizado || estadoEncontrado}`);
     }
 
     /**
-     * GEOLOCALIZACIÓN PRECISA CON FORMATO COMPLETO:
-     * [Calle y Número], [Colonia], [Código Postal], [Ciudad], [Estado], México
+     * SINCRONIZACIÓN INMEDIATA EN MAPA AL SELECCIONAR CIUDAD O COLONIA
      */
-    async function geocodificarDireccionCompleta({ calleNumero, colonia, cp, ciudad, estado }) {
-      const calleClean = (calleNumero || '').trim();
-      const colClean = (colonia || '').trim();
-      const cpClean = (cp || '').trim().replace(/\D/g, '');
-      const cdClean = (ciudad || '').trim();
-      const estClean = (estado || '').trim();
+    async function alSeleccionarCiudadOColonia(tipoForm) {
+      const idCiudad = tipoForm === 'cli' ? 'cliCiudad' : 'tecCiudad';
+      const idEstado = tipoForm === 'cli' ? 'cliEstado' : 'tecEstado';
+      const idCp = tipoForm === 'cli' ? 'cliCp' : 'tecCp';
+      const idDir = tipoForm === 'cli' ? 'cliDireccion' : 'tecDireccion';
 
-      // Formato completo requerido: [Calle y Número], [Colonia], [Código Postal], [Ciudad], [Estado], México
-      const partes = [];
-      if (calleClean) partes.push(calleClean);
-      if (colClean) partes.push(colClean);
-      if (cpClean) partes.push(cpClean);
-      if (cdClean) partes.push(cdClean);
-      if (estClean) partes.push(estClean);
-      partes.push('México');
+      const selectCiudad = document.getElementById(idCiudad);
+      const selectEstado = document.getElementById(idEstado);
+      const inputCp = document.getElementById(idCp);
+      const inputDir = document.getElementById(idDir);
+      if (!selectCiudad) return;
 
-      const direccionCompleta = partes.join(', ');
+      const selOpt = selectCiudad.options[selectCiudad.selectedIndex];
+      if (!selOpt || !selOpt.value) return;
+
+      const valorLimpio = limpiarTextoUbicacion(selOpt.value);
+      const col = selOpt.dataset.colonia || (selOpt.textContent.includes('📍') ? valorLimpio : '');
+      const muni = selOpt.dataset.municipio || (selOpt.textContent.includes('🏛️') ? valorLimpio : '');
+      const cp = selOpt.dataset.cp || (inputCp ? inputCp.value.trim() : '');
+      const est = (selectEstado ? selectEstado.value : '') || '';
+      const calle = inputDir ? inputDir.value.trim() : '';
+
+      // Si la opción ya tiene coordenadas precisas precargadas
+      let lat = selOpt.dataset.lat ? parseFloat(selOpt.dataset.lat) : null;
+      let lng = selOpt.dataset.lng ? parseFloat(selOpt.dataset.lng) : null;
+
+      // Si no tiene coordenadas o hay calle escrita, geocodificar de inmediato
+      if (!lat || !lng || (calle && calle.length > 3)) {
+        const coords = await geocodificarDireccionCompleta({
+          calleNumero: calle,
+          colonia: col,
+          cp: cp,
+          ciudad: valorLimpio,
+          estado: est,
+          municipioSugerido: muni
+        });
+        if (coords) {
+          lat = coords.lat;
+          lng = coords.lng;
+          selOpt.dataset.lat = lat;
+          selOpt.dataset.lng = lng;
+        }
+      }
+
+      if (lat && lng && appState.leafletMapAdmin) {
+        // Centrar suavemente en la ubicación asignada
+        appState.leafletMapAdmin.setView([lat, lng], 14, { animate: true });
+
+        const esTec = tipoForm === 'tec';
+        const iconHtml = esTec
+          ? `<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold ring-4 ring-emerald-500/30">🔧</div>`
+          : `<div class="w-8 h-8 rounded-full bg-rose-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold ring-4 ring-rose-500/30">📍</div>`;
+
+        const previewIcon = L.divIcon({
+          className: 'preview-loc-marker',
+          html: iconHtml,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        if (esTec) {
+          if (appState._previewTecMarker) appState.leafletMapAdmin.removeLayer(appState._previewTecMarker);
+          appState._previewTecMarker = L.marker([lat, lng], { icon: previewIcon })
+            .bindPopup(`
+              <div class="text-xs space-y-1 p-1">
+                <p class="font-bold text-emerald-400">🔧 Base / Origen Técnico</p>
+                <p class="text-slate-200">${col ? col + ', ' : ''}${muni || valorLimpio}, ${est}</p>
+                <p class="text-slate-400">📮 CP: ${cp || 'N/D'}</p>
+              </div>
+            `)
+            .addTo(appState.leafletMapAdmin);
+          appState._previewTecMarker.openPopup();
+        } else {
+          if (appState._previewCliMarker) appState.leafletMapAdmin.removeLayer(appState._previewCliMarker);
+          appState._previewCliMarker = L.marker([lat, lng], { icon: previewIcon })
+            .bindPopup(`
+              <div class="text-xs space-y-1 p-1">
+                <p class="font-bold text-rose-400">📍 Ubicación Cliente</p>
+                <p class="text-slate-200">${col ? col + ', ' : ''}${muni || valorLimpio}, ${est}</p>
+                <p class="text-slate-400">📮 CP: ${cp || 'N/D'}</p>
+              </div>
+            `)
+            .addTo(appState.leafletMapAdmin);
+          appState._previewCliMarker.openPopup();
+        }
+
+        mostrarToast(`📍 Ubicación ${esTec ? 'Técnico' : 'Cliente'}: ${col ? col + ', ' : ''}${muni || valorLimpio} (${cp ? 'CP ' + cp : est})`);
+      }
+    }
+
+    /**
+     * GEOLOCALIZACIÓN PRECISA Y JERÁRQUICA CON VALIDACIÓN ESTRICTA DE CP Y MUNICIPIO
+     * [Calle y Número], [Colonia], [Código Postal], [Ciudad/Municipio], [Estado], México
+     */
+    async function geocodificarDireccionCompleta({ calleNumero, colonia, cp, ciudad, estado, municipioSugerido }) {
+      const calleClean = limpiarTextoUbicacion(calleNumero);
+      let colClean = limpiarTextoUbicacion(colonia);
+      const cpClean = (cp || '').replace(/\D/g, '');
+      let cdClean = limpiarTextoUbicacion(ciudad);
+      const estClean = limpiarTextoUbicacion(estado);
+
+      // Resolver municipio real mediante código postal y catálogos oficiales
+      const prefijo = cpClean.slice(0, 2);
+      let muniClean = limpiarTextoUbicacion(municipioSugerido);
+      if (!muniClean && DICCIONARIO_CP_ESTADOS_MEX[prefijo]) {
+        muniClean = DICCIONARIO_CP_ESTADOS_MEX[prefijo].ciudad;
+      }
+      // Si la ciudad ingresada no coincide con el municipio pero coincide con una colonia
+      if (!colClean && cdClean && muniClean && cdClean.toLowerCase() !== muniClean.toLowerCase()) {
+        colClean = cdClean;
+      }
+      if (!muniClean && cdClean) {
+        muniClean = cdClean;
+      }
+
+      const partesDir = [calleClean, colClean, cpClean, muniClean, estClean, 'México'].filter(Boolean);
+      const direccionCompleta = partesDir.join(', ');
 
       try {
-        // Intento 1: Cadena completa exacta
-        let url1 = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(direccionCompleta)}&format=json&limit=1&addressdetails=1`;
-        let res = await fetch(url1, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
-        if (res.ok) {
-          let data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            return {
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon),
-              verificada: true,
-              query: direccionCompleta
-            };
-          }
+        // Intento 1: Búsqueda Estructurada por Calle y Código Postal (Exactitud satelital)
+        if (calleClean && cpClean) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?street=${encodeURIComponent(calleClean)}&postalcode=${cpClean}&country=Mexico&format=json&limit=1&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0 && validarResultadoGeocodificacion(data[0], cpClean, estClean)) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), verificada: true, query: direccionCompleta };
+              }
+            }
+          } catch(e) {}
         }
 
-        // Intento 2: Búsqueda estructurada (street, postalcode, city, state, country)
-        let queryParams = [];
-        if (calleClean) queryParams.push(`street=${encodeURIComponent(calleClean)}`);
-        if (cpClean) queryParams.push(`postalcode=${encodeURIComponent(cpClean)}`);
-        if (cdClean) queryParams.push(`city=${encodeURIComponent(cdClean)}`);
-        if (estClean) queryParams.push(`state=${encodeURIComponent(estClean)}`);
-        queryParams.push('country=Mexico&format=json&limit=1');
-
-        let url2 = `https://nominatim.openstreetmap.org/search?${queryParams.join('&')}`;
-        res = await fetch(url2, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
-        if (res.ok) {
-          let data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            return {
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon),
-              verificada: true,
-              query: direccionCompleta
-            };
-          }
+        // Intento 2: Búsqueda Estructurada por Calle, Municipio y Estado
+        if (calleClean && muniClean) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?street=${encodeURIComponent(calleClean)}&city=${encodeURIComponent(muniClean)}&state=${encodeURIComponent(estClean)}&country=Mexico&format=json&limit=1&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0 && validarResultadoGeocodificacion(data[0], cpClean, estClean)) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), verificada: true, query: direccionCompleta };
+              }
+            }
+          } catch(e) {}
         }
 
-        // Intento 3: Búsqueda por CP + Ciudad + Estado
-        const queryAprox = [cpClean, cdClean, estClean, 'México'].filter(Boolean).join(', ');
-        let url3 = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryAprox)}&format=json&limit=1`;
-        res = await fetch(url3, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
-        if (res.ok) {
-          let data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            return {
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon),
-              verificada: true,
-              query: queryAprox
-            };
-          }
+        // Intento 3: Calle + Colonia + Municipio + Estado (Búsqueda exacta contextualizada)
+        if (calleClean && colClean && muniClean) {
+          try {
+            const qStr = [calleClean, colClean, muniClean, estClean, 'México'].filter(Boolean).join(', ');
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(qStr)}&format=json&limit=1&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0 && validarResultadoGeocodificacion(data[0], cpClean, estClean)) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), verificada: true, query: qStr };
+              }
+            }
+          } catch(e) {}
+        }
+
+        // Intento 4: Colonia + Municipio + Estado (Ubicar la colonia dentro de su municipio correspondiente)
+        if (colClean && muniClean) {
+          try {
+            const qCol = [colClean, muniClean, estClean, 'México'].filter(Boolean).join(', ');
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(qCol)}&format=json&limit=1&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0 && validarResultadoGeocodificacion(data[0], cpClean, estClean)) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), verificada: true, query: qCol };
+              }
+            }
+          } catch(e) {}
+        }
+
+        // Intento 5: Centroide Oficial del Código Postal (Estructurado, exacto para el CP)
+        if (cpClean) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?postalcode=${cpClean}&country=mexico&format=json&limit=1&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0 && validarResultadoGeocodificacion(data[0], cpClean, estClean)) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), verificada: true, query: `CP ${cpClean}, ${muniClean || estClean}` };
+              }
+            }
+          } catch(e) {}
+        }
+
+        // Intento 6: Centroide del Municipio
+        if (muniClean) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(muniClean)}&state=${encodeURIComponent(estClean)}&country=Mexico&format=json&limit=1&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0 && validarResultadoGeocodificacion(data[0], cpClean, estClean)) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), verificada: true, query: `${muniClean}, ${estClean}` };
+              }
+            }
+          } catch(e) {}
         }
       } catch(e) {
         console.warn('Geocodificación online falló o sin red, usando catálogo base:', e);
       }
 
-      // Fallback a coordenadas del catálogo base
-      const base = CATALOGO_MEXICO[estClean] || CATALOGO_MEXICO['Yucatán'] || { lat: 20.9674, lng: -89.5926 };
+      // Fallback seguro a catálogo local (Municipio o Estado)
+      const base = CATALOGO_MEXICO[estClean] || CATALOGO_MEXICO['Estado de México'] || { lat: 19.2826, lng: -99.6557 };
       return {
         lat: base.lat,
         lng: base.lng,
