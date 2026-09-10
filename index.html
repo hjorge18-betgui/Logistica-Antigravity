@@ -733,7 +733,7 @@
               </div>
               <div>
                 <label class="block text-slate-400 text-[10px] mb-0.5">Teléfono Celular / WhatsApp</label>
-                <input type="text" id="tecTelefono" placeholder="525585601910" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white text-xs focus:outline-none focus:border-emerald-500" />
+                <input type="text" id="tecTelefono" placeholder="525585601910" oninput="sincronizarTelefonoTecnico()" onchange="sincronizarTelefonoTecnico()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white text-xs focus:outline-none focus:border-emerald-500" />
               </div>
             </div>
 
@@ -4175,7 +4175,9 @@
       const tecEstado = (document.getElementById('tecEstado') ? document.getElementById('tecEstado').value : '') || 'Yucatán';
       const tecCd = (document.getElementById('tecCiudad') ? document.getElementById('tecCiudad').value : '') || tecEstado || 'Mérida';
       const tecCp = (document.getElementById('tecCp') ? document.getElementById('tecCp').value.trim() : '') || '97000';
-      const tecTel = (document.getElementById('tecTelefono') ? document.getElementById('tecTelefono').value.trim() : '') || '525585601910';
+      let tecTelRaw = (document.getElementById('tecTelefono') ? document.getElementById('tecTelefono').value.trim().replace(/\D/g, '') : '');
+      if (tecTelRaw.length === 10) tecTelRaw = '52' + tecTelRaw;
+      const tecTel = tecTelRaw || '525585601910';
       const tecHora = document.getElementById('tecHoraInicio').value || '09:00';
       const slaNivel = document.getElementById('slaSeleccionado').value;
 
@@ -4705,7 +4707,22 @@
         return;
       }
 
-      const tel = (s.tecnico.telefono || '525585601910').replace(/\D/g, '');
+      // Priorizar el número ingresado en el campo "Teléfono Celular / WhatsApp" del formulario
+      const inputTelTec = document.getElementById('tecTelefono');
+      let telFormulario = inputTelTec ? inputTelTec.value.trim().replace(/\D/g, '') : '';
+      if (telFormulario.length === 10) telFormulario = '52' + telFormulario;
+
+      let tel = '';
+      if (telFormulario && telFormulario.length >= 10) {
+        tel = telFormulario;
+        if (s.tecnico) s.tecnico.telefono = telFormulario;
+      } else if (s.tecnico && s.tecnico.telefono) {
+        let t = s.tecnico.telefono.toString().replace(/\D/g, '');
+        if (t.length === 10) t = '52' + t;
+        tel = t;
+      } else {
+        tel = '525585601910';
+      }
       const linkTecnico = 'https://hjorge18-betgui.github.io/Logistica-Antigravity';
 
       const rankingStr = s.tecnico.ranking ? `⭐ ${s.tecnico.ranking}` : '⭐ 4.9';
@@ -5196,6 +5213,30 @@ ${linkTecnico}`;
         if (inpCp) inpCp.value = tec.cp || '97000';
         if (inpTel) inpTel.value = tec.telefono || '525585601910';
       }
+    }
+
+    function sincronizarTelefonoTecnico() {
+      const inputTel = document.getElementById('tecTelefono');
+      if (!inputTel) return;
+      let raw = inputTel.value.trim().replace(/\D/g, '');
+      if (raw.length === 10) raw = '52' + raw;
+
+      const idActivo = appState.ordenEnEdicionId || appState.servicioActivoId;
+      if (idActivo) {
+        const serv = appState.servicios.find(s => s.id === idActivo && !s.eliminada);
+        if (serv && serv.tecnico) {
+          serv.tecnico.telefono = raw || inputTel.value.trim();
+        }
+      }
+
+      const selTec = document.getElementById('tecSeleccionadoDropdown');
+      if (selTec && selTec.value && selTec.value !== 'custom') {
+        const tObj = catalogoTecnicos.find(t => t.id === selTec.value);
+        if (tObj) {
+          tObj.telefono = raw || inputTel.value.trim();
+        }
+      }
+      guardarEnAlmacenamientoLocal();
     }
 
     /**
@@ -7447,6 +7488,8 @@ ${linkTecnico}`;
     window.actualizarBarraSeleccionados = actualizarBarraSeleccionados;
     window.abrirModalEliminarSeleccionados = abrirModalEliminarSeleccionados;
     window.conmutarInterfaz = conmutarInterfaz;
+    window.sincronizarTelefonoTecnico = sincronizarTelefonoTecnico;
+    window.despacharWhatsApp = despacharWhatsApp;
 
     function mostrarToast(txt) {
       const toast = document.createElement('div');
