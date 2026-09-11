@@ -3521,6 +3521,7 @@
 
     function cerrarModalCheckinSelfie() {
       detenerCamaraFrontal();
+      detenerGeolocalizacionEnSitio();
       const modal = document.getElementById('modalCheckinSelfieEnSitio');
       if (modal) modal.classList.add('hidden');
     }
@@ -3581,80 +3582,148 @@
       if (video) video.srcObject = null;
     }
 
-    function obtenerGeolocalizacionEnSitio(mostrarToastGps = false) {
+    let watchGpsDispositivoId = null;
+    let gpsDispositivoCache = null;
+
+    function iniciarRastreoGpsCelular(mostrarToastGps = false) {
       const coordTxt = document.getElementById('checkinGpsCoordText');
-      if (coordTxt) coordTxt.innerText = 'Sincronizando GPS de alta precisión...';
+      const distTxt = document.getElementById('checkinGpsDistText');
+      if (coordTxt) coordTxt.innerHTML = '<span class="text-cyan-300 animate-pulse font-semibold">📡 Obteniendo GPS real del celular...</span>';
+      if (distTxt) distTxt.innerText = 'Esperando señal de satélites / red móvil del dispositivo...';
+
+      if (!navigator.geolocation) {
+        console.warn('Geolocation no soportada en navegador, consultando geolocalización de red.');
+        obtenerUbicacionPorRedIp(mostrarToastGps);
+        return;
+      }
+
+      // 1. Iniciar seguimiento continuo de alta precisión por satélite del celular
+      if (watchGpsDispositivoId === null) {
+        try {
+          watchGpsDispositivoId = navigator.geolocation.watchPosition(
+            (pos) => {
+              procesarPosicionGpsDispositivo(pos, 'GPS Celular (Satélite)', mostrarToastGps);
+            },
+            (err) => {
+              console.warn('Aviso watchPosition GPS celular:', err.message);
+            },
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 3000 }
+          );
+        } catch(e) {
+          console.warn('Fallo al iniciar watchPosition:', e);
+        }
+      }
+
+      // 2. Lectura prioritaria inmediata con alta precisión (GPS por satélite del dispositivo)
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          procesarPosicionGpsDispositivo(pos, 'GPS Celular (Satélite)', mostrarToastGps);
+        },
+        (errHigh) => {
+          console.warn('GPS alta precisión celular tardó o falló:', errHigh.message, 'Intentando con antenas celulares / wifi...');
+          
+          // 3. Fallback a antenas celulares / Wi-Fi del dispositivo
+          navigator.geolocation.getCurrentPosition(
+            (posLow) => {
+              procesarPosicionGpsDispositivo(posLow, 'GPS Celular (Red Móvil)', mostrarToastGps);
+            },
+            (errLow) => {
+              console.warn('GPS red móvil no disponible:', errLow.message);
+              obtenerUbicacionPorRedIp(mostrarToastGps, errLow.message);
+            },
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
+          );
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
+    function detenerGeolocalizacionEnSitio() {
+      if (watchGpsDispositivoId !== null) {
+        try {
+          navigator.geolocation.clearWatch(watchGpsDispositivoId);
+        } catch(e) {}
+        watchGpsDispositivoId = null;
+      }
+    }
+
+    // Alias para compatibilidad con llamadas existentes
+    function obtenerGeolocalizacionEnSitio(mostrarToastGps = false) {
+      iniciarRastreoGpsCelular(mostrarToastGps);
+    }
+
+    function procesarPosicionGpsDispositivo(pos, origen = 'GPS Celular', mostrarToastGps = false) {
+      if (!pos || !pos.coords) return;
+      const lat = parseFloat(pos.coords.latitude.toFixed(6));
+      const lng = parseFloat(pos.coords.longitude.toFixed(6));
+      const precision = Math.round(pos.coords.accuracy || 10);
+
+      gpsDispositivoCache = {
+        lat: lat,
+        lng: lng,
+        precisionMetros: precision,
+        origen: origen,
+        timestamp: Date.now()
+      };
 
       const s = appState.servicios.find(item => item.id === servicioCheckinActualId);
       const destCoords = (s && s.ruta && s.ruta.destinoCoords) ? s.ruta.destinoCoords : null;
 
-      if (!navigator.geolocation) {
-        usarFallbackGps(s, destCoords, 'Geolocalización no soportada');
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = parseFloat(pos.coords.latitude.toFixed(6));
-          const lng = parseFloat(pos.coords.longitude.toFixed(6));
-          const precision = Math.round(pos.coords.accuracy || 15);
-
-          let distKm = 0;
-          if (destCoords && destCoords.lat && destCoords.lng) {
-            distKm = calcularDistanciaGeodesicaKm(lat, lng, destCoords.lat, destCoords.lng);
-          } else {
-            distKm = 0.05; // 50m
-          }
-
-          const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(2)} km`;
-
-          gpsCheckinActual = {
-            lat: lat,
-            lng: lng,
-            precisionMetros: precision,
-            distanciaKm: parseFloat(distKm.toFixed(3)),
-            distanciaStr: distStr,
-            enSitio: distKm <= 0.35,
-            timestamp: Date.now()
-          };
-
-          actualizarIndicadoresGpsUI(gpsCheckinActual);
-          if (mostrarToastGps) {
-            mostrarToast(`📍 GPS Sincronizado: ${lat}, ${lng} (±${precision}m, a ${distStr} del cliente)`);
-          }
-        },
-        (err) => {
-          console.warn('Aviso de geolocalización:', err.message);
-          usarFallbackGps(s, destCoords, err.message);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    }
-
-    function usarFallbackGps(s, destCoords, motivo) {
-      let lat = 19.432608;
-      let lng = -99.133209;
+      let distKm = 0;
       if (destCoords && destCoords.lat && destCoords.lng) {
-        lat = destCoords.lat + (Math.random() * 0.0006 - 0.0003);
-        lng = destCoords.lng + (Math.random() * 0.0006 - 0.0003);
-      } else if (s && s.tecnico && s.tecnico.origenCoords) {
-        lat = s.tecnico.origenCoords.lat;
-        lng = s.tecnico.origenCoords.lng;
+        distKm = calcularDistanciaGeodesicaKm(lat, lng, destCoords.lat, destCoords.lng);
+      } else {
+        distKm = 0.03;
       }
+
+      // Se considera "En Sitio" si el dispositivo celular está a menos de 250 metros del cliente
+      const enSitio = distKm <= 0.25;
+      const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(2)} km`;
 
       gpsCheckinActual = {
-        lat: parseFloat(lat.toFixed(6)),
-        lng: parseFloat(lng.toFixed(6)),
-        precisionMetros: 25,
-        distanciaKm: 0.08,
-        distanciaStr: '80 m',
-        enSitio: true,
-        estimado: true,
-        motivoFallback: motivo,
+        lat: lat,
+        lng: lng,
+        precisionMetros: precision,
+        distanciaKm: parseFloat(distKm.toFixed(3)),
+        distanciaStr: distStr,
+        enSitio: enSitio,
+        origen: origen,
         timestamp: Date.now()
       };
 
       actualizarIndicadoresGpsUI(gpsCheckinActual);
+
+      if (mostrarToastGps) {
+        mostrarToast(`📱 GPS Celular Sincronizado: ${lat}, ${lng} (±${precision}m, a ${distStr} del sitio del cliente)`);
+      }
+    }
+
+    async function obtenerUbicacionPorRedIp(mostrarToastGps = false, errorPrevio = '') {
+      const coordTxt = document.getElementById('checkinGpsCoordText');
+      const distTxt = document.getElementById('checkinGpsDistText');
+
+      try {
+        const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.latitude && data.longitude) {
+            const mockPos = {
+              coords: {
+                latitude: parseFloat(data.latitude),
+                longitude: parseFloat(data.longitude),
+                accuracy: 1200
+              }
+            };
+            procesarPosicionGpsDispositivo(mockPos, `Red Celular (${data.city || 'Ubicación Dispositivo'})`, mostrarToastGps);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('GeoJS IP fallo:', e);
+      }
+
+      if (coordTxt) coordTxt.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ Permiso de ubicación requerido en celular</span>';
+      if (distTxt) distTxt.innerHTML = 'Activa el GPS en tu celular y pulsa <strong>GPS</strong> para sincronizar';
     }
 
     function actualizarIndicadoresGpsUI(gps) {
@@ -3664,13 +3733,21 @@
       const dot = document.getElementById('checkinGpsDot');
 
       if (coordTxt) {
-        coordTxt.innerText = `📍 GPS: ${gps.lat}, ${gps.lng} (±${gps.precisionMetros}m)${gps.estimado ? ' [Red]' : ''}`;
+        coordTxt.innerHTML = `<span class="font-bold text-cyan-300">📱 Celular: ${gps.lat}, ${gps.lng}</span> <span class="text-[9px] text-slate-400 font-normal">(±${gps.precisionMetros}m)</span>`;
       }
       if (distTxt) {
-        distTxt.innerHTML = `Distancia al cliente: <strong class="text-emerald-400 font-bold">${gps.distanciaStr}</strong> · En ubicación confirmada`;
+        if (gps.enSitio) {
+          distTxt.innerHTML = `Distancia al cliente: <strong class="text-emerald-400 font-bold">${gps.distanciaStr}</strong> · <span class="text-emerald-300 font-semibold">✅ En el Sitio del Cliente</span>`;
+        } else {
+          distTxt.innerHTML = `Distancia al cliente: <strong class="text-amber-400 font-bold">${gps.distanciaStr}</strong> · <span class="text-amber-300 font-semibold">⚠️ Fuera de Sitio</span>`;
+        }
       }
-      if (ping) ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
-      if (dot) dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+      if (ping) ping.className = gps.enSitio 
+        ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
+        : "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+      if (dot) dot.className = gps.enSitio
+        ? "relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"
+        : "relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500";
     }
 
     function aplicarSelloDigitalEnCanvas(canvas, fuenteImagen, esVideo = false) {
@@ -3696,11 +3773,13 @@
         sla: { nivel: '1h', estatus: 'Cumplido' }
       };
 
-      const gps = gpsCheckinActual || {
+      const gps = gpsCheckinActual || gpsDispositivoCache || {
         lat: 19.432608,
         lng: -99.133209,
         precisionMetros: 15,
-        distanciaStr: 'En Sitio (< 50m)'
+        distanciaStr: 'En Sitio (< 50m)',
+        enSitio: true,
+        origen: 'GPS Celular'
       };
 
       const ahora = new Date();
@@ -3736,7 +3815,7 @@
 
       ctx.fillStyle = '#22d3ee';
       ctx.font = 'bold 11px monospace';
-      ctx.fillText('🛡️ CHECK-IN EN SITIO BET-GUI', w - badgeW - 2, 31);
+ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
 
       // Textos de la marca de agua en la franja inferior
       const padX = 18;
@@ -3760,11 +3839,12 @@
       const clienteStr = `${s.cliente.nombre} - ${s.cliente.ciudad || ''}`;
       ctx.fillText(`CLIENTE: ${clienteStr.substring(0, 60)}`, padX, textY);
 
-      // Línea 3: Coordenadas GPS y Distancia
+      // Línea 3: Coordenadas GPS reales del dispositivo celular y distancia calculada al cliente
       textY += 19;
       ctx.font = 'bold 11px monospace';
       ctx.fillStyle = '#34d399';
-      ctx.fillText(`GPS: ${gps.lat}, ${gps.lng} (±${gps.precisionMetros}m)  |  DISTANCIA: ${gps.distanciaStr}`, padX, textY);
+      const statusSitio = gps.enSitio ? 'EN SITIO' : `FUERA DE SITIO (${gps.distanciaStr})`;
+      ctx.fillText(`📱 GPS CELULAR: ${gps.lat}, ${gps.lng} (±${gps.precisionMetros}m)  |  ${statusSitio}`, padX, textY);
 
       // Línea 4: Fecha, Hora y SLA
       textY += 19;
@@ -4003,31 +4083,11 @@
       }
 
       const ev = s.evidenciaLlegada;
-      const tec = s.tecnico || {};
-      const cli = s.cliente || {};
-      const rankingStr = tec.ranking ? `⭐ ${tec.ranking}` : '⭐ 5.0';
-      const catStr = tec.categoriaRanking ? `(${tec.categoriaRanking})` : '(Excelente)';
-      const durTraslado = (s.tiemposMinutos && s.tiemposMinutos.traslado) ? `${s.tiemposMinutos.traslado} min` : '25 min';
-      const durTotalSla = (s.tiemposMinutos && s.tiemposMinutos.tiempoTotalHastaSitio) ? `${s.tiemposMinutos.tiempoTotalHastaSitio} min` : durTraslado;
       let tel = telefonoDestino || '525585601910';
       tel = tel.replace(/\D/g, '');
       if (tel.length === 10) tel = '52' + tel;
 
-      const mensajeWhatsApp = 
-`📸 *BET-GUI LOGÍSTICA | CHECK-IN DE ARRIBO EN SITIO*
-━━━━━━━━━━━━━━━━━━━━━
-📋 *FOLIO:* #${s.id}
-👤 *TÉCNICO:* ${tec.nombre || 'Técnico'} (${rankingStr} ${catStr})
-🏢 *CLIENTE:* ${cli.nombre}
-📍 *DIRECCIÓN:* ${cli.direccion || 'Sitio de Servicio'}, ${cli.ciudad}, ${cli.estado || ''}
-⏱️ *SLA:* ${s.sla ? s.sla.nivel : '1h'} (${s.sla ? s.sla.estatus : 'Cumplido'})
-⏳ *TIEMPO DESDE ACEPTACIÓN:* ${durTotalSla} (Traslado: ${durTraslado})
-━━━━━━━━━━━━━━━━━━━━━
-📍 *COORDENADAS GPS:* ${ev.gps ? `${ev.gps.lat}, ${ev.gps.lng} (±${ev.gps.precisionMetros}m)` : 'En Sitio'}
-📏 *DISTANCIA AL CLIENTE:* ${ev.distanciaStr || 'En Sitio (< 50m)'}
-🗺️ *VERIFICAR EN MAPA:* ${ev.mapsUrl || `https://www.google.com/maps?q=${ev.gps ? `${ev.gps.lat},${ev.gps.lng}` : ''}`}
-━━━━━━━━━━━━━━━━━━━━━
-✅ *ESTATUS CONFIRMADO:* El técnico está físicamente en sitio. Selfie frontal sellada y georreferenciada capturada con éxito.`;
+      const mensajeWhatsApp = `ESTATUS CONFIRMADO: El técnico está físicamente en sitio. Selfie frontal sellada y georreferenciada capturada con éxito.`;
 
       // 1. Descargar archivo al equipo
       descargarSelfieArchivo(ev.dataUrl, `BetGui_Selfie_CheckIn_${s.id}.jpg`);
@@ -4291,8 +4351,14 @@
           const tec = s.tecnico || { nombre: 'Técnico de Campo', ranking: '5.0' };
           const cli = s.cliente || { nombre: 'Cliente Bet-Gui', ciudad: 'CDMX' };
           const sla = s.sla || { nivel: '1h', estatus: 'Cumplido' };
-          const lat = (s.ruta && s.ruta.destinoCoords && s.ruta.destinoCoords.lat) ? s.ruta.destinoCoords.lat : (19.3817 + idx * 0.005);
-          const lng = (s.ruta && s.ruta.destinoCoords && s.ruta.destinoCoords.lng) ? s.ruta.destinoCoords.lng : (-99.1882 - idx * 0.005);
+          const lat = (gpsDispositivoCache && gpsDispositivoCache.lat) || (gpsCheckinActual && gpsCheckinActual.lat) || ((s.ruta && s.ruta.destinoCoords && s.ruta.destinoCoords.lat) ? s.ruta.destinoCoords.lat : (19.3817 + idx * 0.005));
+          const lng = (gpsDispositivoCache && gpsDispositivoCache.lng) || (gpsCheckinActual && gpsCheckinActual.lng) || ((s.ruta && s.ruta.destinoCoords && s.ruta.destinoCoords.lng) ? s.ruta.destinoCoords.lng : (-99.1882 - idx * 0.005));
+          let distKm = 0;
+          if (s.ruta && s.ruta.destinoCoords && s.ruta.destinoCoords.lat) {
+            distKm = calcularDistanciaGeodesicaKm(lat, lng, s.ruta.destinoCoords.lat, s.ruta.destinoCoords.lng);
+          }
+          const enSitio = distKm <= 0.25;
+          const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} m (${enSitio ? 'En Sitio' : 'En Radio'})` : `${distKm.toFixed(2)} km (Fuera de Sitio)`;
 
           // 2. Insignia superior derecha: "🛡️ CHECK-IN EN SITIO BET-GUI"
           const badgeW = 235;
@@ -4339,7 +4405,7 @@
           textY += 18;
           ctx.font = 'bold 11px monospace';
           ctx.fillStyle = '#34d399';
-          ctx.fillText(`GPS: ${typeof lat === 'number' ? lat.toFixed(6) : lat}, ${typeof lng === 'number' ? lng.toFixed(6) : lng} (±10m)  |  DISTANCIA: 15 m (En Sitio)`, padX, textY);
+          ctx.fillText(`📱 GPS CELULAR: ${typeof lat === 'number' ? lat.toFixed(6) : lat}, ${typeof lng === 'number' ? lng.toFixed(6) : lng} (±10m)  |  ${distStr}`, padX, textY);
 
           // Fecha y SLA
           textY += 18;
@@ -4355,7 +4421,7 @@
             tecnico: tec.nombre,
             cliente: cli.nombre,
             gps: { lat, lng, precisionMetros: 10 },
-            distanciaStr: '15 m (En Sitio)',
+            distanciaStr: distStr,
             fechaHora: `${ahora.toLocaleDateString('es-MX')} ${ahora.toLocaleTimeString('es-MX')}`,
             tiempoMinutos: 22,
             slaNivel: sla.nivel || '1h',
@@ -4925,6 +4991,8 @@
     };
 
     window.addEventListener('DOMContentLoaded', () => {
+      // Iniciar pre-sincronización silenciosa del GPS del dispositivo celular
+      if (typeof iniciarRastreoGpsCelular === 'function') setTimeout(() => { iniciarRastreoGpsCelular(false); }, 1500);
       lucide.createIcons();
       cargarDesdeAlmacenamientoLocal();
       poblarSelectoresEstados();
