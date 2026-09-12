@@ -952,9 +952,11 @@
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span>Red Vial & Carreteras de México</span>
             </span>
-            <div class="flex items-center gap-1">
-              <button onclick="cambiarCapaMapa('calles')" id="btnLayerCalles" class="bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium">Calles a Color</button>
-              <button onclick="cambiarCapaMapa('esri')" id="btnLayerEsri" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium">Esri HD</button>
+            <div class="flex items-center gap-1 flex-wrap">
+              <button onclick="cambiarCapaMapa('calles')" id="btnLayerCalles" class="bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium shadow" title="Calles a Color en Alta Definición (Carto Voyager)">Calles HD</button>
+              <button onclick="cambiarCapaMapa('esri')" id="btnLayerEsri" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium" title="Callejero Mundial Esri">Esri Calles</button>
+              <button onclick="cambiarCapaMapa('satelite')" id="btnLayerSatelite" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium" title="Vista Satelital de Alta Resolución">🛰️ Satélite</button>
+              <button onclick="cambiarCapaMapa('oscuro')" id="btnLayerOscuro" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium" title="Modo Oscuro">🌙 Oscuro</button>
               <button onclick="centrarMexico()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded flex items-center gap-1"><i data-lucide="maximize-2" class="w-3 h-3"></i><span>México</span></button>
             </div>
           </div>
@@ -5555,8 +5557,73 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
     }
 
     /**
-     * INICIALIZACIÓN DE MAPAS (OPENSTREETMAP Y ESRI SIN MARCA DE AGUA)
+     * PROVEEDORES DE MAPAS DE ALTA DISPONIBILIDAD (SIN BLOQUEOS 403)
      */
+    const PROVEEDORES_TILES = {
+      // 1. CartoDB Voyager: Calles a color en HD, nombres de ciudades y vías en México, CDN global sin bloqueos
+      calles: {
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        options: {
+          subdomains: 'abcd',
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
+        }
+      },
+      // 2. Esri World Street Map: Callejero mundial oficial de Esri
+      esri: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        fallbackUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        options: {
+          maxZoom: 19,
+          attribution: 'Tiles &copy; Esri — DeLorme, NAVTEQ'
+        }
+      },
+      // 3. Esri Satélite HD: Fotografía aérea y satelital en alta resolución
+      satelite: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        options: {
+          maxZoom: 19,
+          attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics'
+        }
+      },
+      // 4. CartoDB Dark Matter: Modo oscuro elegante integrado al diseño nocturno
+      oscuro: {
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        fallbackUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        options: {
+          subdomains: 'abcd',
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+        }
+      }
+    };
+
+    function crearCapaTilesRobusta(tipo = 'calles') {
+      const cfg = PROVEEDORES_TILES[tipo] || PROVEEDORES_TILES.calles;
+      const capa = L.tileLayer(cfg.url, cfg.options);
+
+      // Mecanismo de blindaje contra errores de carga: si un tile individual falla por red o respuesta no 200, conmuta automáticamente al servidor de respaldo
+      capa.on('tileerror', function(errorEvent) {
+        if (errorEvent && errorEvent.tile && !errorEvent.tile._hasFallback && cfg.fallbackUrl) {
+          errorEvent.tile._hasFallback = true;
+          const coords = errorEvent.coords;
+          if (coords) {
+            let fallbackTileUrl = cfg.fallbackUrl
+              .replace('{z}', coords.z)
+              .replace('{x}', coords.x)
+              .replace('{y}', coords.y)
+              .replace('{r}', '')
+              .replace('{s}', 'a');
+            errorEvent.tile.src = fallbackTileUrl;
+          }
+        }
+      });
+
+      return capa;
+    }
+
     function inicializarMapaAdmin() {
       const centroMexico = [23.6345, -102.5528];
       if (!appState.leafletMapAdmin) {
@@ -5581,11 +5648,8 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
           center: [23.6345, -102.5528],
           zoom: 5
         });
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap'
-        }).addTo(appState.leafletMapTecnico);
 
+        appState.capaTecnico = crearCapaTilesRobusta('calles').addTo(appState.leafletMapTecnico);
         appState.markersGroupTecnico = L.layerGroup().addTo(appState.leafletMapTecnico);
       }
 
@@ -5595,28 +5659,24 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
     }
 
     function aplicarCapaTiles(tipo) {
-      if (appState.capaAdmin) {
+      if (appState.capaAdmin && appState.leafletMapAdmin) {
         appState.leafletMapAdmin.removeLayer(appState.capaAdmin);
       }
 
+      appState.capaAdmin = crearCapaTilesRobusta(tipo).addTo(appState.leafletMapAdmin);
+
       const btnCalles = document.getElementById('btnLayerCalles');
       const btnEsri = document.getElementById('btnLayerEsri');
+      const btnSatelite = document.getElementById('btnLayerSatelite');
+      const btnOscuro = document.getElementById('btnLayerOscuro');
 
-      if (tipo === 'esri') {
-        appState.capaAdmin = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-          maxZoom: 19,
-          attribution: 'Tiles &copy; Esri'
-        }).addTo(appState.leafletMapAdmin);
-        if (btnEsri) btnEsri.className = "bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium";
-        if (btnCalles) btnCalles.className = "bg-slate-800 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium";
-      } else {
-        appState.capaAdmin = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap'
-        }).addTo(appState.leafletMapAdmin);
-        if (btnCalles) btnCalles.className = "bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium";
-        if (btnEsri) btnEsri.className = "bg-slate-800 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium";
-      }
+      const btnActivo = "bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium shadow transition";
+      const btnInactivo = "bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium transition";
+
+      if (btnCalles) btnCalles.className = (tipo === 'calles') ? btnActivo : btnInactivo;
+      if (btnEsri) btnEsri.className = (tipo === 'esri') ? btnActivo : btnInactivo;
+      if (btnSatelite) btnSatelite.className = (tipo === 'satelite') ? btnActivo : btnInactivo;
+      if (btnOscuro) btnOscuro.className = (tipo === 'oscuro') ? btnActivo : btnInactivo;
     }
 
     function cambiarCapaMapa(tipo) {
