@@ -152,7 +152,7 @@
             onclick="seleccionarPerfilLogin('admin')" 
             class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-indigo-500">
             <span class="font-bold text-indigo-400 block">👑 Admin</span>
-            <span class="text-slate-400 truncate block text-[9px]">admin@betgui.com</span>
+            <span class="text-slate-400 truncate block text-[9px]">Administración</span>
             <span class="text-emerald-400 text-[8px] block">Full Access</span>
           </button>
 
@@ -161,7 +161,7 @@
             onclick="seleccionarPerfilLogin('gerente')" 
             class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-amber-500">
             <span class="font-bold text-amber-400 block">💼 Gerente</span>
-            <span class="text-slate-400 truncate block text-[9px]">gerente@betgui.com</span>
+            <span class="text-slate-400 truncate block text-[9px]">Gerencia</span>
             <span class="text-amber-400 text-[8px] block">KPIs & Excel</span>
           </button>
 
@@ -170,7 +170,7 @@
             onclick="seleccionarPerfilLogin('supervisor')" 
             class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-rose-500">
             <span class="font-bold text-rose-400 block">🛡️ Supervisor</span>
-            <span class="text-slate-400 truncate block text-[9px]">supervisor@betgui.com</span>
+            <span class="text-slate-400 truncate block text-[9px]">Supervisión</span>
             <span class="text-rose-400 text-[8px] block">Supervisión</span>
           </button>
 
@@ -179,7 +179,7 @@
             onclick="seleccionarPerfilLogin('dispatch')" 
             class="bg-slate-900 hover:bg-slate-800 p-2 rounded-lg border border-slate-700 text-left transition focus:border-cyan-500">
             <span class="font-bold text-cyan-400 block">📡 Dispatch</span>
-            <span class="text-slate-400 truncate block text-[9px]">dispatch@betgui.com</span>
+            <span class="text-slate-400 truncate block text-[9px]">Mesa de Control</span>
             <span class="text-cyan-400 text-[8px] block">Despacho</span>
           </button>
 
@@ -219,7 +219,7 @@
               type="text" 
               id="loginUsuario" 
               value="" 
-              placeholder="Ingresa tu correo oficial o nombre (Ej: admin@betgui.com)"
+              placeholder="Ingresa tu usuario, correo oficial o nombre"
               required
               class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
             />
@@ -242,12 +242,7 @@
               class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
             />
           </div>
-          <div class="bg-slate-950/70 p-2 rounded-lg border border-slate-800 text-[10px] text-slate-400 mt-1 space-y-0.5">
-            <p class="font-semibold text-slate-300">🔑 Claves del Sistema:</p>
-            <p>• Admin: <code class="text-indigo-400 font-bold">Admin2026!</code> | Gerente: <code class="text-amber-400 font-bold">Gerente2026!</code></p>
-            <p>• Supervisor: <code class="text-rose-400 font-bold">Supervisor2026!</code> | Dispatch: <code class="text-cyan-400 font-bold">Dispatch2026!</code></p>
-            <p>• Técnicos en Campo: <code class="text-emerald-400 font-bold">Tecnico2026!</code></p>
-          </div>
+          
         </div>
 
         <button 
@@ -953,7 +948,7 @@
               <span>Red Vial & Carreteras de México</span>
             </span>
             <div class="flex items-center gap-1 flex-wrap">
-              <button onclick="cambiarCapaMapa('calles')" id="btnLayerCalles" class="bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium shadow" title="Calles a Color en Alta Definición (Carto Voyager)">Calles HD</button>
+              <button onclick="cambiarCapaMapa('calles')" id="btnLayerCalles" class="bg-indigo-600 text-white text-[11px] px-2 py-0.5 rounded font-medium shadow" title="Calles a Color en Alta Definición (Esri HD)">Calles HD</button>
               <button onclick="cambiarCapaMapa('esri')" id="btnLayerEsri" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium" title="Callejero Mundial Esri">Esri Calles</button>
               <button onclick="cambiarCapaMapa('satelite')" id="btnLayerSatelite" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium" title="Vista Satelital de Alta Resolución">🛰️ Satélite</button>
               <button onclick="cambiarCapaMapa('oscuro')" id="btnLayerOscuro" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded font-medium" title="Modo Oscuro">🌙 Oscuro</button>
@@ -5172,43 +5167,21 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
         }
       }
 
-      // Autenticación de Técnico cuando accede desde enlace de WhatsApp
-      if (rolParam === 'tecnico') {
-        const sesionGuardada = localStorage.getItem('fsm_auth_session');
-        let authValida = false;
-        if (sesionGuardada) {
-          try {
-            const user = JSON.parse(sesionGuardada);
-            if (user && user.rol === 'tecnico') {
-              establecerSesion(user);
-              conmutarInterfaz('tecnico');
-              authValida = true;
-            }
-          } catch(e){}
-        }
+      // Siempre exigir autenticación explícita con usuario y contraseña al ingresar a la plataforma
+      appState.usuarioActual = null;
+      localStorage.removeItem('fsm_auth_session');
 
-        if (!authValida) {
-          // Exigir autenticación explícita con usuario y contraseña del técnico
-          document.getElementById('loginModalOverlay').classList.remove('hidden');
-          seleccionarPerfilLogin('tecnico');
-          const pInput = document.getElementById('loginPassword');
-          if (pInput) {
-            pInput.value = '';
-            pInput.focus();
-          }
-          mostrarToast('🔒 Acceso Seguro: Ingresa usuario y contraseña de Técnico para ver tu orden.');
-        }
-      } else {
-        const sesionGuardada = localStorage.getItem('fsm_auth_session');
-        if (sesionGuardada) {
-          try {
-            const user = JSON.parse(sesionGuardada);
-            establecerSesion(user);
-            if (user.rol === 'tecnico') {
-              conmutarInterfaz('tecnico');
-            }
-          } catch(e){}
-        }
+      const modalLogin = document.getElementById('loginModalOverlay');
+      if (modalLogin) modalLogin.classList.remove('hidden');
+
+      const inpUserInit = document.getElementById('loginUsuario');
+      const inpPassInit = document.getElementById('loginPassword');
+      if (inpUserInit) inpUserInit.value = '';
+      if (inpPassInit) inpPassInit.value = '';
+
+      if (rolParam === 'tecnico') {
+        seleccionarPerfilLogin('tecnico');
+        mostrarToast('🔒 Acceso Seguro: Ingresa tu usuario y contraseña de Técnico para ver tu orden.');
       }
 
       const d = new Date();
@@ -5237,24 +5210,37 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
      * AUTENTICACIÓN
      */
     function seleccionarPerfilLogin(rol) {
-      let email = 'admin@betgui.com';
-      if (rol === 'tecnico') email = 'tecnico@betgui.com';
-      else if (rol === 'gerente') email = 'gerente@betgui.com';
-      else if (rol === 'supervisor') email = 'supervisor@betgui.com';
-      else if (rol === 'dispatch') email = 'dispatch@betgui.com';
-
       const inpUser = document.getElementById('loginUsuario');
       const inpPass = document.getElementById('loginPassword');
       const hint = document.getElementById('loginPassHint');
       
-      if (inpUser) inpUser.value = email;
+      const rolesMap = {
+        admin: 'admin',
+        gerente: 'gerente',
+        supervisor: 'supervisor',
+        dispatch: 'dispatch',
+        tecnico: 'tecnico'
+      };
+
+      const placeholders = {
+        admin: 'Usuario Administrador (ej: admin o correo)',
+        gerente: 'Usuario Gerente (ej: gerente o correo)',
+        supervisor: 'Usuario Supervisor (ej: supervisor o correo)',
+        dispatch: 'Usuario Dispatch (ej: dispatch o correo)',
+        tecnico: 'Usuario Técnico (ej: nombre o correo)'
+      };
+
+      if (inpUser) {
+        inpUser.value = '';
+        inpUser.placeholder = placeholders[rol] || 'Ingresa tu usuario oficial';
+        inpUser.focus();
+      }
       if (inpPass) {
-        inpPass.value = ''; // OBLIGATORIO: Nunca autocompletar la contraseña
-        inpPass.focus();
+        inpPass.value = '';
       }
       if (hint) {
-        hint.innerText = `Escribe la clave de ${rol.toUpperCase()}`;
-        hint.className = "text-[10px] text-amber-400 font-mono font-bold animate-pulse";
+        hint.innerText = '⚠️ Escribe tu contraseña';
+        hint.className = "text-[10px] text-amber-400 font-mono";
       }
     }
 
@@ -5269,7 +5255,7 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
         inpPass.focus();
       }
       if (hint) {
-        hint.innerText = 'Escribe contraseña: Tecnico2026!';
+        hint.innerText = '⚠️ Escribe tu contraseña';
         hint.className = "text-[10px] text-emerald-400 font-mono font-bold animate-pulse";
       }
     }
@@ -5284,7 +5270,7 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
 
       // Si hay técnicos en el catálogo, agregar opciones
       if (tecs.length > 0) {
-        sel.innerHTML = tecs.map(t => {
+        sel.innerHTML = '<option value="">-- Selecciona tu nombre de técnico --</option>' + tecs.map(t => {
           const email = generarEmailTecnico(t.nombre);
           return `<option value="${email}">${t.nombre} (${t.id || 'Técnico'})</option>`;
         }).join('');
@@ -5311,9 +5297,17 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
         return;
       }
 
-      // 1. Buscar en USUARIOS_SISTEMA por clave directa
+      // 1. Buscar en USUARIOS_SISTEMA por clave directa o por rol
       let cuentaKey = Object.keys(USUARIOS_SISTEMA).find(k => k.toLowerCase() === u.toLowerCase());
       let cuenta = cuentaKey ? USUARIOS_SISTEMA[cuentaKey] : null;
+
+      if (!cuenta) {
+        const rolEntry = Object.entries(USUARIOS_SISTEMA).find(([k, val]) => val.rol && val.rol.toLowerCase() === u.toLowerCase());
+        if (rolEntry) {
+          cuentaKey = rolEntry[0];
+          cuenta = rolEntry[1];
+        }
+      }
 
       // 2. Buscar por coincidencia de nombre
       if (!cuenta) {
@@ -5560,23 +5554,22 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
      * PROVEEDORES DE MAPAS DE ALTA DISPONIBILIDAD (SIN BLOQUEOS 403)
      */
     const PROVEEDORES_TILES = {
-      // 1. CartoDB Voyager: Calles a color en HD, nombres de ciudades y vías en México, CDN global sin bloqueos
+      // 1. Calles HD: Red Vial y Carreteras a Color de México (100% Libre sin API Key)
       calles: {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
         options: {
-          subdomains: 'abcd',
           maxZoom: 19,
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
+          attribution: 'Tiles &copy; Esri'
         }
       },
-      // 2. Esri World Street Map: Callejero mundial oficial de Esri
+      // 2. Esri Calles: Callejero Mundial y Topográfico Oficial
       esri: {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-        fallbackUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
         options: {
           maxZoom: 19,
-          attribution: 'Tiles &copy; Esri — DeLorme, NAVTEQ'
+          attribution: 'Tiles &copy; Esri'
         }
       },
       // 3. Esri Satélite HD: Fotografía aérea y satelital en alta resolución
@@ -5585,17 +5578,16 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
         fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
         options: {
           maxZoom: 19,
-          attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics'
+          attribution: 'Tiles &copy; Esri'
         }
       },
-      // 4. CartoDB Dark Matter: Modo oscuro elegante integrado al diseño nocturno
+      // 4. Modo Oscuro: Canvas Dark Gray oficial Esri (Sin API Key)
       oscuro: {
-        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        fallbackUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
         options: {
-          subdomains: 'abcd',
           maxZoom: 19,
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+          attribution: 'Tiles &copy; Esri'
         }
       }
     };
