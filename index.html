@@ -659,6 +659,7 @@
         <div id="tabContentManual" class="space-y-2.5">
           
           <!-- Indicador de Orden en Edición / Nueva Orden -->
+          <div id="formFinalizadoAvisoBox" class="hidden p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl space-y-2 mb-2"></div>
           <div id="indicadorModoEdicion" class="hidden flex items-center justify-between p-2 rounded-xl bg-indigo-950/80 border border-indigo-500/40 text-xs shadow-sm">
             <span class="text-indigo-300 font-semibold flex items-center gap-1.5">
               <i data-lucide="edit-3" class="w-3.5 h-3.5 text-indigo-400"></i>
@@ -964,16 +965,18 @@
               <span id="dockRadioBadge" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">≤1h En Radio</span>
               <span id="dockCountdown" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono hidden">⏳ 15:00</span>
               <span id="dockClienteNombre" class="font-semibold text-white">Cliente</span>
+              <!-- Botones del Repositorio de la Nube para Descarga Directa por Administrador -->
+              <div id="dockDocumentosNube" class="flex items-center gap-1.5 flex-wrap hidden"></div>
             </div>
 
             <div class="flex items-center gap-2">
               <span id="dockDistanciaTiempo" class="font-bold text-white text-xs">0 km · 0 min</span>
               <span id="dockCosto" class="text-emerald-400 font-bold text-xs">$0.00 MXN</span>
-              <button onclick="despacharWhatsApp(appState.servicioActivoId)" title="Enviar orden por WhatsApp al Técnico" class="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2.5 py-0.5 rounded text-[11px] font-bold border border-emerald-500/30 flex items-center gap-1 transition shadow-sm">
+              <button id="dockBtnWhatsApp" onclick="despacharWhatsApp(appState.servicioActivoId)" title="Enviar orden por WhatsApp al Técnico" class="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2.5 py-0.5 rounded text-[11px] font-bold border border-emerald-500/30 flex items-center gap-1 transition shadow-sm">
                 <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
                 <span>WhatsApp</span>
               </button>
-              <button onclick="abrirAlertaRojaCancelacion(appState.servicioActivoId)" class="bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white px-2 py-0.5 rounded text-[11px] font-bold border border-rose-500/30 transition">
+              <button id="dockBtnCancelar" onclick="abrirAlertaRojaCancelacion(appState.servicioActivoId)" class="bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white px-2 py-0.5 rounded text-[11px] font-bold border border-rose-500/30 transition">
                 Cancelar Ruta
               </button>
             </div>
@@ -1580,31 +1583,31 @@
         Estatus: Pendiente de Confirmación
       </div>
 
-      <!-- Botones del Técnico en Campo (Ajustados para fácil pulsación en Celular) -->
+      <!-- Botones del Técnico en Campo (Secuenciales con Bloqueo de Estado) -->
       <div class="space-y-2 pt-1">
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="cambiarEstadoDesdeTecnico('Aceptado')" class="py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/30">
+          <button id="btnTecAceptar" onclick="cambiarEstadoDesdeTecnico('Aceptado')" class="py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/30">
             <i data-lucide="check-circle" class="w-4 h-4"></i>
-            <span>Aceptar Servicio</span>
+            <span id="txtTecAceptar">Aceptar Servicio</span>
           </button>
-          <button onclick="cambiarEstadoDesdeTecnico('En Camino')" class="py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30">
+          <button id="btnTecEnCamino" onclick="cambiarEstadoDesdeTecnico('En Camino')" class="py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30">
             <i data-lucide="truck" class="w-4 h-4"></i>
-            <span>En Camino</span>
+            <span id="txtTecEnCamino">En Camino</span>
           </button>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="abrirModalCheckinSelfie()" class="py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30">
+          <button id="btnTecLlegar" onclick="abrirModalCheckinSelfie()" class="py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30">
             <i data-lucide="camera" class="w-4 h-4"></i>
-            <span>Llegué al Sitio</span>
+            <span id="txtTecLlegar">Llegué al Sitio</span>
           </button>
-          <button onclick="solicitarCierreConCandadoServicio()" class="py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/30">
+          <button id="btnTecFinalizar" onclick="solicitarCierreConCandadoServicio()" class="py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/30">
             <i data-lucide="award" class="w-4 h-4"></i>
-            <span>Finalizar Trabajo</span>
+            <span id="txtTecFinalizar">Finalizar Trabajo</span>
           </button>
         </div>
 
-        <button onclick="rechazarServicioTecnicoModal()" class="w-full py-2.5 bg-rose-600/20 hover:bg-rose-600 active:bg-rose-700 text-rose-400 hover:text-white border border-rose-500/30 font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm">
+        <button id="btnTecRechazar" onclick="rechazarServicioTecnicoModal()" class="w-full py-2.5 bg-rose-600/20 hover:bg-rose-600 active:bg-rose-700 text-rose-400 hover:text-white border border-rose-500/30 font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm">
           <i data-lucide="x-circle" class="w-4 h-4"></i>
           <span>Rechazar / Cancelar con Motivo</span>
         </button>
@@ -2098,6 +2101,12 @@
         <textarea id="candadoObservacionesCierre" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" placeholder="Ej: Trabajo completado a entera satisfacción del cliente. Equipos probados y operando..."></textarea>
       </div>
 
+      <!-- Botón de Pruebas Rápidas para Autocompletar Boleta y Entregables Demo -->
+      <button type="button" onclick="cargarDemoBoletaYEntregables()" class="w-full py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 flex items-center justify-center gap-1.5 transition">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span>Autocompletar Boleta y Entregables para Demostración / Pruebas</span>
+      </button>
+
       <!-- Botón de Cierre con Validación de Candado -->
       <div class="pt-2">
         <button onclick="validarCandadoYFinalizarServicio()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30">
@@ -2183,7 +2192,7 @@
       </div>
 
       <!-- Contenedor de Cámara / Vista Previa -->
-      <div class="relative bg-black rounded-xl overflow-hidden border border-slate-800 aspect-[4/3] max-h-[280px] flex items-center justify-center">
+      <div onclick="capturarSelfieConMarcaDeAgua()" class="relative bg-black rounded-xl overflow-hidden border border-slate-800 aspect-[4/3] max-h-[280px] flex items-center justify-center cursor-pointer group" title="Haz clic o toca la cámara para tomar la selfie">
         <!-- Video Stream Frontal -->
         <video id="checkinSelfieVideo" autoplay playsinline muted class="w-full h-full object-cover" style="transform: scaleX(-1);"></video>
         
@@ -2213,20 +2222,20 @@
       <div class="space-y-2 pt-1">
         <!-- Estado 1: Antes de tomar la foto -->
         <div id="checkinBotonesCaptura" class="space-y-2">
+          <button onclick="capturarSelfieConMarcaDeAgua()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 cursor-pointer">
+            <i data-lucide="camera" class="w-5 h-5"></i>
+            <span>📸 Capturar Selfie en Sitio Ahora</span>
+          </button>
           <div class="grid grid-cols-2 gap-2">
-            <button onclick="capturarSelfieConMarcaDeAgua()" class="py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30" title="Capturar con la cámara frontal">
-              <i data-lucide="camera" class="w-4 h-4"></i>
-              <span>Tomar con Cámara</span>
+            <button onclick="document.getElementById('checkinSelfieFileInput').click()" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5" title="Abrir cámara nativa del celular">
+              <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
+              <span>Cámara del Celular</span>
             </button>
-            <button onclick="document.getElementById('checkinSelfieFileInput').click()" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5" title="Seleccionar foto existente">
-              <i data-lucide="upload" class="w-4 h-4"></i>
-              <span>Subir Archivo</span>
+            <button onclick="cargarFotoRealDemoTecnicoCheckin()" class="py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-1.5" title="Cargar foto real de técnico para pruebas en PC">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+              <span>Foto Demo (PC)</span>
             </button>
           </div>
-          <button onclick="cargarFotoRealDemoTecnicoCheckin()" class="w-full py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-1.5" title="Cargar foto real nítida de técnico en campo para pruebas">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span>Usar Fotografía de Campo en Sitio (Demostración)</span>
-          </button>
         </div>
 
         <!-- Estado 2: Foto tomada, lista para confirmar y enviar WhatsApp -->
@@ -3792,7 +3801,14 @@
       }
 
       if (loader) loader.classList.add('hidden');
-      mostrarToast('ℹ️ Permiso de cámara directo no disponible en este dispositivo. Puedes usar "Subir de Celular".');
+      console.warn('getUserMedia no disponible, activando input nativo de cámara móvil');
+      // Si estamos en celular, disparar la cámara del sistema operativo directamente
+      const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (esMovil) {
+        document.getElementById('checkinSelfieFileInput').click();
+      } else {
+        mostrarToast('ℹ️ Cámara web no detectada en PC. Usa "Cámara del Celular" o "Foto Demo (PC)".');
+      }
     }
 
     function detenerCamaraFrontal() {
@@ -4123,8 +4139,13 @@
       const video = document.getElementById('checkinSelfieVideo');
       const canvas = document.getElementById('checkinSelfieCanvas');
 
-      // Si la cámara no está activa, o no emite cuadros válidos (pantalla negra en PC sin webcam)
+      // Si la cámara no está activa o el stream de video aún no emite cuadros
       if (!video || !video.videoWidth || video.videoWidth === 0 || (!video.srcObject && !streamCamaraCheckin)) {
+        const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (esMovil) {
+          document.getElementById('checkinSelfieFileInput').click();
+          return;
+        }
         cargarFotoRealDemoTecnicoCheckin();
         return;
       }
@@ -6015,6 +6036,61 @@
       appState.ordenEnEdicionId = s.id;
       appState.forzarNuevaOrden = false;
 
+      const esFinalizado = s.estatusTecnico === 'Finalizado';
+      const avisoFinalizado = document.getElementById('formFinalizadoAvisoBox');
+      const btnCalc = document.getElementById('btnCalcularRutaManual');
+
+      // Bloqueo de Historial: Si el servicio está Finalizado, proteger formulario como Solo Lectura
+      if (avisoFinalizado) {
+        if (esFinalizado) {
+          avisoFinalizado.classList.remove('hidden');
+          const tieneB = s.boletaServicio && s.boletaServicio.dataUrl;
+          const cantE = s.entregables ? s.entregables.length : 0;
+          const tieneS = s.evidenciaLlegada && s.evidenciaLlegada.dataUrl;
+
+          avisoFinalizado.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-300 text-xs flex items-center gap-1.5">
+                <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+                <span>🔒 SERVICIO FINALIZADO #${s.id} (HISTORIAL SOLO LECTURA)</span>
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Técnico Liberado</span>
+            </div>
+            <p class="text-[11px] text-slate-300">Este servicio fue concluido y auditado. Sus documentos están almacenados en el repositorio de la nube para consulta y descarga.</p>
+            <div class="flex items-center gap-2 pt-1 flex-wrap">
+              ${tieneB ? `<button type="button" onclick="verBoletaServicio('${s.id}')" class="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition"><i data-lucide="file-check-2" class="w-3.5 h-3.5"></i><span>Bajar Boleta Firmada</span></button>` : ''}
+              ${cantE > 0 ? `<button type="button" onclick="verEntregablesServicio('${s.id}')" class="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition"><i data-lucide="package-check" class="w-3.5 h-3.5"></i><span>Bajar Entregables (${cantE})</span></button>` : ''}
+              ${tieneS ? `<button type="button" onclick="verEvidenciaCheckin('${s.id}')" class="px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition"><i data-lucide="camera" class="w-3.5 h-3.5"></i><span>Bajar Selfie</span></button>` : ''}
+            </div>
+          `;
+        } else {
+          avisoFinalizado.classList.add('hidden');
+          avisoFinalizado.innerHTML = '';
+        }
+      }
+
+      // Bloquear o habilitar inputs del formulario
+      const inputsForm = [
+        'cliNombre', 'cliDireccion', 'cliEstado', 'cliCiudad', 'cliCp', 'cliTelefono',
+        'tecSeleccionadoDropdown', 'tecNombre', 'tecDireccion', 'tecEstado', 'tecCiudad',
+        'tecCp', 'tecTelefono', 'tecHoraInicio', 'slaSeleccionado'
+      ];
+      inputsForm.forEach(idInput => {
+        const elInp = document.getElementById(idInput);
+        if (elInp) elInp.disabled = esFinalizado;
+      });
+
+      if (btnCalc) {
+        if (esFinalizado) {
+          btnCalc.disabled = true;
+          btnCalc.className = "w-full py-3 bg-slate-800 text-slate-400 font-bold rounded-xl border border-slate-700/50 flex items-center justify-center gap-2 cursor-not-allowed opacity-60";
+          btnCalc.innerHTML = '<i data-lucide="lock" class="w-4 h-4 text-amber-400"></i><span>Servicio en Historial Finalizado (Solo Lectura - No Modificable)</span>';
+        } else {
+          btnCalc.disabled = false;
+          btnCalc.className = "w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer";
+        }
+      }
+
       const inCliNom = document.getElementById('cliNombre');
       const inCliDir = document.getElementById('cliDireccion');
       const inCliEst = document.getElementById('cliEstado');
@@ -6425,6 +6501,35 @@
       } else {
         radioBadge.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
         radioBadge.innerText = "🔴 Fuera Radio (>1h)";
+      }
+
+      // Repositorio en la Nube: Si el servicio está Finalizado o cuenta con documentos, habilitar botones de descarga
+      const dockDocs = document.getElementById('dockDocumentosNube');
+      const btnWpDock = document.getElementById('dockBtnWhatsApp');
+      const btnCancDock = document.getElementById('dockBtnCancelar');
+
+      if (dockDocs) {
+        if (serv.estatusTecnico === 'Finalizado' || (serv.boletaServicio && serv.boletaServicio.dataUrl)) {
+          dockDocs.classList.remove('hidden');
+          const tieneBoleta = serv.boletaServicio && serv.boletaServicio.dataUrl;
+          const numEntregables = serv.entregables ? serv.entregables.length : 0;
+          const tieneSelfie = serv.evidenciaLlegada && serv.evidenciaLlegada.dataUrl;
+
+          dockDocs.innerHTML = `
+            ${tieneBoleta ? `<button onclick="verBoletaServicio('${serv.id}')" title="Ver y Bajar Boleta de Servicio Firmada en la Nube" class="px-2.5 py-0.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-[11px] font-bold flex items-center gap-1 shadow transition"><i data-lucide="file-check-2" class="w-3.5 h-3.5"></i><span>📄 Bajar Boleta</span></button>` : ''}
+            ${numEntregables > 0 ? `<button onclick="verEntregablesServicio('${serv.id}')" title="Ver y Bajar Entregables (${numEntregables})" class="px-2.5 py-0.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-[11px] font-bold flex items-center gap-1 shadow transition"><i data-lucide="package-check" class="w-3.5 h-3.5"></i><span>📦 Bajar Entregables (${numEntregables})</span></button>` : ''}
+            ${tieneSelfie ? `<button onclick="verEvidenciaCheckin('${serv.id}')" title="Ver y Bajar Selfie de Arribo en la Nube" class="px-2.5 py-0.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[11px] font-bold flex items-center gap-1 shadow transition"><i data-lucide="camera" class="w-3.5 h-3.5"></i><span>📸 Bajar Selfie</span></button>` : ''}
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">🏁 Finalizado · Téc. Libre</span>
+          `;
+
+          if (btnWpDock) btnWpDock.classList.add('hidden');
+          if (btnCancDock) btnCancDock.classList.add('hidden');
+        } else {
+          dockDocs.classList.add('hidden');
+          dockDocs.innerHTML = '';
+          if (btnWpDock) btnWpDock.classList.remove('hidden');
+          if (btnCancDock) btnCancDock.classList.remove('hidden');
+        }
       }
 
       const dockCountdown = document.getElementById('dockCountdown');
@@ -7742,6 +7847,7 @@ ${linkTecnico}`;
     }
 
     function restablecerVistaTecnicoEnEspera() {
+      actualizarIndicadoresBotonesTecnico(null);
       appState.servicioActivoId = null;
       const u = appState.usuarioActual;
       const nomTec = (u && u.rol === 'tecnico') ? u.nombre : 'Técnico';
@@ -7883,6 +7989,8 @@ ${linkTecnico}`;
         banner.className = "p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 text-center font-bold text-xs";
         banner.innerHTML = "⏳ Pendiente de Confirmación";
       }
+      const sAct = appState.servicios.find(item => item.id === appState.servicioActivoId);
+      if (sAct) actualizarIndicadoresBotonesTecnico(sAct);
     }
 
     
@@ -7900,6 +8008,185 @@ ${linkTecnico}`;
       if (bytes < 1024) return bytes + ' B';
       if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
       return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    
+    /**
+     * GESTIÓN SECUENCIAL DE BOTONES DEL TÉCNICO EN CAMPO
+     * Bloquea botones conforme avanza el proceso y bloquea todo al finalizar
+     */
+    function actualizarIndicadoresBotonesTecnico(s) {
+      const btnAceptar = document.getElementById('btnTecAceptar');
+      const btnEnCamino = document.getElementById('btnTecEnCamino');
+      const btnLlegar = document.getElementById('btnTecLlegar');
+      const btnFinalizar = document.getElementById('btnTecFinalizar');
+      const btnRechazar = document.getElementById('btnTecRechazar');
+      const txtAceptar = document.getElementById('txtTecAceptar');
+      const txtEnCamino = document.getElementById('txtTecEnCamino');
+      const txtLlegar = document.getElementById('txtTecLlegar');
+      const txtFinalizar = document.getElementById('txtTecFinalizar');
+
+      if (!btnAceptar || !btnEnCamino || !btnLlegar || !btnFinalizar || !btnRechazar) return;
+
+      const styleDisabled = "py-3 bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm rounded-xl border border-slate-700/40 flex items-center justify-center gap-1.5 cursor-not-allowed opacity-35 pointer-events-none shadow-none";
+      const styleEnabledAceptar = "py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/30 cursor-pointer";
+      const styleEnabledEnCamino = "py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30 cursor-pointer animate-pulse";
+      const styleEnabledLlegar = "py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30 cursor-pointer animate-pulse";
+      const styleEnabledFinalizar = "py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/40 cursor-pointer";
+      const styleRechazar = "w-full py-2.5 bg-rose-600/20 hover:bg-rose-600 active:bg-rose-700 text-rose-400 hover:text-white border border-rose-500/30 font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer";
+      const styleRechazarDisabled = "w-full py-2.5 bg-slate-800/40 text-slate-600 border border-slate-700/20 font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed opacity-30 pointer-events-none shadow-none";
+
+      if (!s) {
+        btnAceptar.className = styleDisabled;
+        btnEnCamino.className = styleDisabled;
+        btnLlegar.className = styleDisabled;
+        btnFinalizar.className = styleDisabled;
+        btnRechazar.className = styleRechazarDisabled;
+        return;
+      }
+
+      const est = s.estatusTecnico || 'Pendiente';
+
+      if (est === 'Pendiente') {
+        btnAceptar.className = styleEnabledAceptar;
+        btnAceptar.disabled = false;
+        if (txtAceptar) txtAceptar.innerText = 'Aceptar Servicio';
+
+        btnEnCamino.className = styleDisabled;
+        btnEnCamino.disabled = true;
+        if (txtEnCamino) txtEnCamino.innerText = 'En Camino';
+
+        btnLlegar.className = styleDisabled;
+        btnLlegar.disabled = true;
+        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio';
+
+        btnFinalizar.className = styleDisabled;
+        btnFinalizar.disabled = true;
+        if (txtFinalizar) txtFinalizar.innerText = 'Finalizar Trabajo';
+
+        btnRechazar.className = styleRechazar;
+        btnRechazar.disabled = false;
+      } else if (est === 'Aceptado') {
+        btnAceptar.className = styleDisabled;
+        btnAceptar.disabled = true;
+        if (txtAceptar) txtAceptar.innerText = '✓ Aceptado';
+
+        btnEnCamino.className = styleEnabledEnCamino;
+        btnEnCamino.disabled = false;
+        if (txtEnCamino) txtEnCamino.innerText = 'Iniciar Traslado (En Camino)';
+
+        btnLlegar.className = styleDisabled;
+        btnLlegar.disabled = true;
+        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio';
+
+        btnFinalizar.className = styleDisabled;
+        btnFinalizar.disabled = true;
+        if (txtFinalizar) txtFinalizar.innerText = 'Finalizar Trabajo';
+
+        btnRechazar.className = styleRechazarDisabled;
+        btnRechazar.disabled = true;
+      } else if (est === 'En Camino') {
+        btnAceptar.className = styleDisabled;
+        btnAceptar.disabled = true;
+        if (txtAceptar) txtAceptar.innerText = '✓ Aceptado';
+
+        btnEnCamino.className = styleDisabled;
+        btnEnCamino.disabled = true;
+        if (txtEnCamino) txtEnCamino.innerText = '✓ En Camino';
+
+        btnLlegar.className = styleEnabledLlegar;
+        btnLlegar.disabled = false;
+        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio (Selfie)';
+
+        btnFinalizar.className = styleDisabled;
+        btnFinalizar.disabled = true;
+        if (txtFinalizar) txtFinalizar.innerText = 'Finalizar Trabajo';
+
+        btnRechazar.className = styleRechazarDisabled;
+        btnRechazar.disabled = true;
+      } else if (est === 'Llegó') {
+        btnAceptar.className = styleDisabled;
+        btnAceptar.disabled = true;
+        if (txtAceptar) txtAceptar.innerText = '✓ Aceptado';
+
+        btnEnCamino.className = styleDisabled;
+        btnEnCamino.disabled = true;
+        if (txtEnCamino) txtEnCamino.innerText = '✓ En Camino';
+
+        btnLlegar.className = styleDisabled;
+        btnLlegar.disabled = true;
+        if (txtLlegar) txtLlegar.innerText = '✓ En Sitio';
+
+        btnFinalizar.className = styleEnabledFinalizar;
+        btnFinalizar.disabled = false;
+        if (txtFinalizar) txtFinalizar.innerText = 'Finalizar Trabajo (Candado)';
+
+        btnRechazar.className = styleRechazarDisabled;
+        btnRechazar.disabled = true;
+      } else if (est === 'Finalizado' || est === 'Cancelado') {
+        btnAceptar.className = styleDisabled;
+        btnAceptar.disabled = true;
+        if (txtAceptar) txtAceptar.innerText = '✓ Aceptado';
+
+        btnEnCamino.className = styleDisabled;
+        btnEnCamino.disabled = true;
+        if (txtEnCamino) txtEnCamino.innerText = '✓ En Camino';
+
+        btnLlegar.className = styleDisabled;
+        btnLlegar.disabled = true;
+        if (txtLlegar) txtLlegar.innerText = '✓ En Sitio';
+
+        btnFinalizar.className = styleDisabled;
+        btnFinalizar.disabled = true;
+        if (txtFinalizar) txtFinalizar.innerText = (est === 'Finalizado') ? '🔒 Concluido (Téc. Libre)' : '🔴 Cancelado';
+
+        btnRechazar.className = styleRechazarDisabled;
+        btnRechazar.disabled = true;
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function cargarDemoBoletaYEntregables() {
+      const s = appState.servicios.find(item => item.id === servicioCierreActualId);
+      const folio = s ? s.id : 'TK-1001';
+      const tecNom = s && s.tecnico ? s.tecnico.nombre : 'Técnico';
+
+      // Simular boleta firmada escaneada
+      boletaCierreTemporal = {
+        nombre: `Boleta_Servicio_Firmada_${folio}.jpg`,
+        tipo: 'image/jpeg',
+        tamano: '385 KB',
+        esPdf: false,
+        dataUrl: FOTOS_REALES_TECNICOS_BASE64[0],
+        fechaCaptura: new Date().toISOString()
+      };
+
+      // Simular entregables
+      entregablesCierreTemporales = [
+        {
+          id: 'ent_demo_1',
+          nombre: `Evidencia_Equipo_Instalado_${folio}.jpg`,
+          tipo: 'image/jpeg',
+          tamano: '412 KB',
+          esPdf: false,
+          dataUrl: FOTOS_REALES_TECNICOS_BASE64[1],
+          fecha: new Date().toISOString()
+        },
+        {
+          id: 'ent_demo_2',
+          nombre: `Reporte_Pruebas_Operativas_${folio}.pdf`,
+          tipo: 'application/pdf',
+          tamano: '215 KB',
+          esPdf: true,
+          dataUrl: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDM2L0ZpbHRlci9GbGF0ZURlY29kZT4+c3RyZWFtCnicS0xPzStRMDLRNzTXM7TQMzTXNTS11DMy0DMx0gcyAc0gB8EKZW5kc3RyZWFtCmVuZG9iago=',
+          fecha: new Date().toISOString()
+        }
+      ];
+
+      actualizarUICandadoBoleta();
+      actualizarUICandadoEntregables();
+      mostrarToast('✨ Boleta y entregables demo cargados en memoria.');
     }
 
     function solicitarCierreConCandadoServicio(id) {
@@ -8291,6 +8578,12 @@ ${linkTecnico}`;
         return;
       }
 
+      // Bloqueo de Historial: Una orden finalizada o cancelada no puede ser modificada
+      if (s.estatusTecnico === 'Finalizado' && nuevoEstado !== 'Finalizado') {
+        alert('⛔ Esta orden ya se encuentra FINALIZADA en el historial y no puede ser modificada.');
+        return;
+      }
+
       s.estatusTecnico = nuevoEstado;
       s.motivoCancelacion = '';
       s.timestamps = s.timestamps || {};
@@ -8472,6 +8765,10 @@ ${linkTecnico}`;
       const s = appState.servicios.find(item => item.id === id);
       if (!s) {
         alert('No hay ninguna orden de servicio seleccionada.');
+        return;
+      }
+      if (s.estatusTecnico === 'Finalizado') {
+        alert('⛔ No se puede cancelar una orden que ya está FINALIZADA en el historial.');
         return;
       }
 
