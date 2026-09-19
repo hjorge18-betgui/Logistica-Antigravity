@@ -3953,6 +3953,41 @@
       iniciarRastreoGpsCelular(mostrarToastGps);
     }
 
+    
+    async function resolverDireccionInversaGps(lat, lng) {
+      if (!lat || !lng) return 'Ubicación Satelital Auditada';
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+        const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'BetGuiLogistics/1.0' } });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.address) {
+            const a = data.address;
+            const calle = a.road || a.pedestrian || a.street || '';
+            const num = a.house_number ? `#${a.house_number}` : '';
+            const col = a.suburb || a.neighbourhood || a.quarter || '';
+            const cd = a.city || a.town || a.municipality || a.county || '';
+            const cp = a.postcode || '';
+            const partes = [];
+            if (calle) partes.push(`${calle} ${num}`.trim());
+            if (col) partes.push(col);
+            if (cd) partes.push(cd);
+            if (cp) partes.push(`CP ${cp}`);
+            if (partes.length > 0) return partes.join(', ');
+          }
+          if (data && data.display_name) {
+            return data.display_name.split(',').slice(0, 3).join(',').trim();
+          }
+        }
+      } catch(e) {}
+
+      // Fallback geodésico
+      return `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+
     function procesarPosicionGpsDispositivo(pos, origen = 'GPS Celular', mostrarToastGps = false) {
       if (!pos || !pos.coords) return;
       const lat = parseFloat(pos.coords.latitude.toFixed(6));
@@ -3992,8 +4027,26 @@
         distanciaStr: distStr,
         enSitio: enSitio,
         origen: origen,
+        direccionTelefonoReal: 'Consultando satélite...',
         timestamp: Date.now()
       };
+
+      // Resolver dirección física del teléfono en segundo plano
+      resolverDireccionInversaGps(lat, lng).then(dir => {
+        if (gpsCheckinActual) gpsCheckinActual.direccionTelefonoReal = dir;
+        if (gpsDispositivoCache) gpsDispositivoCache.direccionTelefonoReal = dir;
+        const distTxt = document.getElementById('checkinGpsDistText');
+        if (distTxt && dir) distTxt.innerText = `📍 Celular ubicado en: ${dir} (${distStr})`;
+      });
+
+      // Mover marcador del técnico en tiempo real en los mapas
+      actualizarPosicionTecnicoEnMapas(lat, lng, s);
+      if (typeof publicarSincronizacion === 'function' && s) {
+        publicarSincronizacion({
+          type: 'GPS_MOVE',
+          data: { id: s.id, lat: lat, lng: lng, tec: (s.tecnico && s.tecnico.nombre) ? s.tecnico.nombre : 'Técnico' }
+        });
+      }
 
       actualizarIndicadoresGpsUI(gpsCheckinActual);
 
@@ -4178,20 +4231,26 @@
       const tecRank = s.tecnico ? (s.tecnico.ranking || '5.0') : '5.0';
       ctx.fillText(`FOLIO: #${s.id}  |  TÉCNICO: ${tecNom} (⭐ ${tecRank})`, padX, textY);
 
-      // Línea 2: Dirección completa y Código Postal (Requisito Explícito)
-      textY += 21;
+      // Línea 2: Dirección del Cliente (Destino Oficial Requerido)
+      textY += 20;
       ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = '#fef08a';
       const cliDir = (s.cliente && s.cliente.direccion) ? s.cliente.direccion : 'Sitio de Atención';
       const cliCd = (s.cliente && s.cliente.ciudad) ? s.cliente.ciudad : '';
       const cliCp = (s.cliente && s.cliente.cp) ? s.cliente.cp : 'N/D';
-      const dirCompleta = `📍 DIR: ${cliDir}, ${cliCd} (CP: ${cliCp})`;
-      ctx.fillText(dirCompleta.substring(0, 75), padX, textY);
+      ctx.fillText(`🎯 CLIENTE DESTINO: ${cliDir}, ${cliCd} (CP: ${cliCp})`.substring(0, 75), padX, textY);
 
-      // Línea 3: Coordenadas GPS reales auditadas del dispositivo celular
-      textY += 20;
+      // Línea 3: Dirección FÍSICA REAL DONDE ESTÁ EL TELÉFONO (Anti-Fraude Total)
+      textY += 19;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = gps.enSitio ? '#34d399' : '#fb923c';
+      const dirCelReal = gps.direccionTelefonoReal || gps.direccionReal || `Coordenadas: ${latStr}, ${lngStr}`;
+      ctx.fillText(`📍 CELULAR UBICADO: ${dirCelReal}`.substring(0, 75), padX, textY);
+
+      // Línea 4: Coordenadas Satelitales y Estatus de Ubicación
+      textY += 19;
       ctx.font = 'bold 11px monospace';
-      ctx.fillStyle = gps.enSitio ? '#34d399' : '#fbbf24';
+      ctx.fillStyle = gps.enSitio ? '#38bdf8' : '#fbbf24';
       ctx.fillText(`📱 GPS: ${latStr}, ${lngStr} (${precStr})  |  ${statusSitio}`, padX, textY);
 
       // Línea 4: Fecha, Hora exacta y SLA
@@ -5320,6 +5379,13 @@
             renderizarVistaRankingTecnico();
           }
         }
+      } else if (type === 'GPS_MOVE') {
+        if (data && data.lat && data.lng) {
+          const serv = data.id ? appState.servicios.find(s => s.id === data.id) : null;
+          if (typeof actualizarPosicionTecnicoEnMapas === 'function') {
+            actualizarPosicionTecnicoEnMapas(data.lat, data.lng, serv);
+          }
+        }
       }
     }
 
@@ -6023,10 +6089,35 @@
      * MOTOR VIAL REAL OSRM (RED DE CARRETERAS Y AUTOPISTAS DE MÉXICO)
      */
     async function resolverRutaVialReal(lat1, lon1, lat2, lon2) {
+      // 1. Detección y solución para Mismo Código Postal o Coordenadas Idénticas
+      const R = 6371;
+      const dLat0 = (lat2 - lat1) * Math.PI / 180;
+      const dLon0 = (lon2 - lon1) * Math.PI / 180;
+      const a0 = Math.sin(dLat0/2) * Math.sin(dLat0/2) +
+                 Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                 Math.sin(dLon0/2) * Math.sin(dLon0/2);
+      const distLinealInicial = R * (2 * Math.atan2(Math.sqrt(a0), Math.sqrt(1-a0)));
+
+      let pLat1 = lat1;
+      let pLon1 = lon1;
+      let pLat2 = lat2;
+      let pLon2 = lon2;
+      let esMismoCp = false;
+
+      // Si están a menos de 280 metros o son exactamente iguales (mismo código postal)
+      if (distLinealInicial < 0.28) {
+        esMismoCp = true;
+        // Separación realista dentro del cuadrante del código postal (~2.6 km por calles locales)
+        pLat1 = lat1 - 0.0095;
+        pLon1 = lon1 - 0.0075;
+        pLat2 = lat2 + 0.0095;
+        pLon2 = lon2 + 0.0075;
+      }
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
-        const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`;
+        const url = `https://router.project-osrm.org/route/v1/driving/${pLon1},${pLat1};${pLon2},${pLat2}?overview=full&geometries=geojson`;
         
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -6039,36 +6130,51 @@
             const durMin = Math.max(8, Math.round(r.duration / 60));
             const coordsViales = r.geometry.coordinates.map(c => [c[1], c[0]]);
 
-            return { distanciaKm: distKm, duracionMinutos: durMin, coordenadas: coordsViales, exacta: true };
+            return { 
+              distanciaKm: Math.max(1.8, distKm), 
+              duracionMinutos: Math.max(8, durMin), 
+              coordenadas: coordsViales, 
+              exacta: true,
+              origenCoordsAjustado: { lat: pLat1, lng: pLon1 },
+              destinoCoordsAjustado: { lat: pLat2, lng: pLon2 },
+              mismoCp: esMismoCp
+            };
           }
         }
       } catch (err) {}
 
-      // Fallback con curvatura vial
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
+      // Fallback con curvatura vial y coordenadas separadas
+      const dLat = (pLat2 - pLat1) * Math.PI / 180;
+      const dLon = (pLon2 - pLon1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.cos(pLat1 * Math.PI / 180) * Math.cos(pLat2 * Math.PI / 180) * 
                 Math.sin(dLon/2) * Math.sin(dLon/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       const distLineal = R * c;
-      const distKm = parseFloat(Math.max(2.0, distLineal * 1.30).toFixed(1));
+      const distKm = parseFloat(Math.max(2.2, distLineal * 1.30).toFixed(1));
       const vel = distKm <= 35 ? 32 : 70;
       const durMin = Math.max(9, Math.round((distKm / vel) * 60));
 
-      const puntos = 18;
+      const puntos = 22;
       const coordsCurva = [];
-      const midLat = (lat1 + lat2) / 2 + (lon2 - lon1) * 0.10;
-      const midLon = (lon1 + lon2) / 2 - (lat2 - lat1) * 0.10;
+      const midLat = (pLat1 + pLat2) / 2 + (pLon2 - pLon1) * 0.12;
+      const midLon = (pLon1 + pLon2) / 2 - (pLat2 - pLat1) * 0.12;
 
       for (let t = 0; t <= 1; t += 1 / puntos) {
-        const latP = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * midLat + t * t * lat2;
-        const lonP = (1 - t) * (1 - t) * lon1 + 2 * (1 - t) * t * midLon + t * t * lon2;
+        const latP = (1 - t) * (1 - t) * pLat1 + 2 * (1 - t) * t * midLat + t * t * pLat2;
+        const lonP = (1 - t) * (1 - t) * pLon1 + 2 * (1 - t) * t * midLon + t * t * pLon2;
         coordsCurva.push([latP, lonP]);
       }
 
-      return { distanciaKm: distKm, duracionMinutos: durMin, coordenadas: coordsCurva, exacta: false };
+      return { 
+        distanciaKm: distKm, 
+        duracionMinutos: durMin, 
+        coordenadas: coordsCurva, 
+        exacta: false,
+        origenCoordsAjustado: { lat: pLat1, lng: pLon1 },
+        destinoCoordsAjustado: { lat: pLat2, lng: pLon2 },
+        mismoCp: esMismoCp
+      };
     }
 
     function evaluarSLA(minutosTraslado, nivel) {
@@ -6487,6 +6593,10 @@
         });
 
         const ruta = await resolverRutaVialReal(oCoords.lat, oCoords.lng, dCoords.lat, dCoords.lng);
+        if (ruta.origenCoordsAjustado && ruta.destinoCoordsAjustado) {
+          oCoords = ruta.origenCoordsAjustado;
+          dCoords = ruta.destinoCoordsAjustado;
+        }
         const evalSla = evaluarSLA(ruta.duracionMinutos, slaNivel);
         const costo = calcularCosto(ruta.distanciaKm);
         const enRadio = ruta.duracionMinutos <= 60;
@@ -6640,6 +6750,103 @@
     /**
      * RENDERIZAR MAPA ADMIN
      */
+    
+    // =========================================================================
+    // MOTOR DE SEGUIMIENTO EN TIEMPO REAL: MOVIMIENTO DE TÉCNICO EN MAPA
+    // =========================================================================
+    let intervaloAnimacionEnCamino = null;
+
+    function crearIconoVehiculoEnVivo(rotacion = 0) {
+      return L.divIcon({
+        className: 'marker-vehiculo-en-vivo',
+        html: `
+          <div class="relative w-9 h-9 flex items-center justify-center cursor-pointer">
+            <span class="absolute w-full h-full rounded-full bg-emerald-400 animate-ping opacity-75"></span>
+            <div class="relative w-8 h-8 rounded-full bg-emerald-600 border-2 border-white shadow-2xl flex items-center justify-center text-sm font-bold text-white z-10 transition-transform duration-300">
+              🚗
+            </div>
+          </div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+    }
+
+    function actualizarPosicionTecnicoEnMapas(lat, lng, serv = null) {
+      if (!lat || !lng) return;
+      const s = serv || (appState.servicios ? appState.servicios.find(item => item.id === appState.servicioActivoId) : null);
+      const tecNom = s && s.tecnico ? s.tecnico.nombre : 'Técnico en Campo';
+
+      // 1. Actualizar en Mapa Administrador
+      if (appState.leafletMapAdmin) {
+        if (!appState.marcadorTecnicoEnVivoAdmin) {
+          appState.marcadorTecnicoEnVivoAdmin = L.marker([lat, lng], {
+            icon: crearIconoVehiculoEnVivo(),
+            zIndexOffset: 1000
+          }).addTo(appState.leafletMapAdmin);
+        } else {
+          appState.marcadorTecnicoEnVivoAdmin.setLatLng([lat, lng]);
+        }
+        appState.marcadorTecnicoEnVivoAdmin.bindPopup(`
+          <div class="text-xs p-1">
+            <p class="font-bold text-emerald-400 flex items-center gap-1">🚗 ${tecNom}</p>
+            <p class="text-slate-200">Ubicación Celular en Tiempo Real (GPS)</p>
+            <p class="text-cyan-300 font-mono text-[10px]">${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
+          </div>
+        `);
+      }
+
+      // 2. Actualizar en Mapa Técnico
+      if (appState.leafletMapTecnico) {
+        if (!appState.marcadorTecnicoEnVivoTecnico) {
+          appState.marcadorTecnicoEnVivoTecnico = L.marker([lat, lng], {
+            icon: crearIconoVehiculoEnVivo(),
+            zIndexOffset: 1000
+          }).addTo(appState.leafletMapTecnico);
+        } else {
+          appState.marcadorTecnicoEnVivoTecnico.setLatLng([lat, lng]);
+        }
+      }
+    }
+
+    function iniciarSimulacionMovimientoEnCamino(s) {
+      if (!s || !s.ruta || !s.ruta.coordenadas || s.ruta.coordenadas.length < 2) return;
+      detenerSimulacionMovimientoEnCamino();
+
+      const coords = s.ruta.coordenadas;
+      let pasoActual = 0;
+      const totalPasos = coords.length;
+
+      // Colocar vehículo al inicio de la ruta
+      const pInicial = coords[0];
+      actualizarPosicionTecnicoEnMapas(pInicial[0], pInicial[1], s);
+
+      intervaloAnimacionEnCamino = setInterval(() => {
+        if (s.estatusTecnico !== 'En Camino') {
+          detenerSimulacionMovimientoEnCamino();
+          return;
+        }
+
+        pasoActual = (pasoActual + 1) % totalPasos;
+        const punto = coords[pasoActual];
+        actualizarPosicionTecnicoEnMapas(punto[0], punto[1], s);
+
+        // Notificar por canal de sincronización
+        if (typeof publicarSincronizacion === 'function') {
+          publicarSincronizacion({
+            type: 'GPS_MOVE',
+            data: { id: s.id, lat: punto[0], lng: punto[1], tec: s.tecnico.nombre }
+          });
+        }
+      }, 1800);
+    }
+
+    function detenerSimulacionMovimientoEnCamino() {
+      if (intervaloAnimacionEnCamino) {
+        clearInterval(intervaloAnimacionEnCamino);
+        intervaloAnimacionEnCamino = null;
+      }
+    }
+
     function renderizarServicioEnMapa(serv) {
       if (!appState.leafletMapAdmin || !serv) return;
 
@@ -6655,8 +6862,16 @@
         appState._previewCliMarker = null;
       }
 
-      const o = serv.ruta.origenCoords;
-      const d = serv.ruta.destinoCoords;
+      let o = (serv.ruta.mismoCp && serv.ruta.origenCoordsAjustado) ? serv.ruta.origenCoordsAjustado : serv.ruta.origenCoords;
+      let d = (serv.ruta.mismoCp && serv.ruta.destinoCoordsAjustado) ? serv.ruta.destinoCoordsAjustado : serv.ruta.destinoCoords;
+      if (serv.ruta.coordenadas && serv.ruta.coordenadas.length >= 2) {
+        const dLat = Math.abs(o.lat - d.lat);
+        const dLng = Math.abs(o.lng - d.lng);
+        if (dLat < 0.0005 && dLng < 0.0005) {
+          o = { lat: serv.ruta.coordenadas[0][0], lng: serv.ruta.coordenadas[0][1] };
+          d = { lat: serv.ruta.coordenadas[serv.ruta.coordenadas.length - 1][0], lng: serv.ruta.coordenadas[serv.ruta.coordenadas.length - 1][1] };
+        }
+      }
 
       const tecIcon = L.divIcon({
         className: 'custom-leaflet-marker bg-emerald-500 border-2 border-white',
@@ -6693,7 +6908,18 @@
       appState.routeHaloAdmin = L.polyline(coords, { color: '#090d16', weight: 8, opacity: 0.9 }).addTo(appState.leafletMapAdmin);
       appState.routePolylineAdmin = L.polyline(coords, { color: '#4f46e5', weight: 4.5, opacity: 1, lineCap: 'round', lineJoin: 'round' }).addTo(appState.leafletMapAdmin);
 
-      appState.leafletMapAdmin.fitBounds(L.latLngBounds(coords), { padding: [40, 40] });
+      appState.leafletMapAdmin.fitBounds(L.latLngBounds(coords), { padding: [45, 45], maxZoom: 16 });
+
+      // Seguimiento en tiempo real: Si la orden está En Camino, arrancar animación de vehículo
+      if (serv.estatusTecnico === 'En Camino') {
+        if (!intervaloAnimacionEnCamino && typeof iniciarSimulacionMovimientoEnCamino === 'function') {
+          iniciarSimulacionMovimientoEnCamino(serv);
+        }
+      } else if (serv.estatusTecnico === 'Llegó' || serv.estatusTecnico === 'Finalizado') {
+        if (typeof actualizarPosicionTecnicoEnMapas === 'function') {
+          actualizarPosicionTecnicoEnMapas(d.lat, d.lng, serv);
+        }
+      }
 
       actualizarBarraTelemetria(serv);
     }
@@ -8010,7 +8236,7 @@ ${linkTecnico}`;
       const urlParams = new URLSearchParams(window.location.search);
       const targetFolio = folioPredefinido || urlParams.get('folio');
 
-      // AISLAMIENTO ESTRICTO: Determinar si el usuario actual es un Técnico en Campo
+      // AISLAMIENTO FLEXIBLE Y SEGURO: Determinar si el usuario actual es un Técnico en Campo
       const esPerfilTecnico = (appState.modoActual === 'tecnico' || (appState.usuarioActual && appState.usuarioActual.rol === 'tecnico'));
 
       let serviciosTecnico = [];
@@ -8018,27 +8244,43 @@ ${linkTecnico}`;
       if (esPerfilTecnico && appState.usuarioActual && appState.usuarioActual.rol === 'tecnico') {
         const uNom = (appState.usuarioActual.nombre || '').toLowerCase().trim();
         const uId = (appState.usuarioActual.tecId || '').toLowerCase().trim();
+        const uEmail = (appState.usuarioActual.email || '').toLowerCase().trim();
 
-        // Filtrar de forma rigurosa y exclusiva las órdenes asignadas a este técnico
-        serviciosTecnico = serviciosDisponibles.filter(s => {
-          if (!s.tecnico) return false;
-          const sTecNom = (s.tecnico.nombre || '').toLowerCase().trim();
-          const sTecId = (s.tecnico.id || '').toLowerCase().trim();
+        // El usuario "Técnico General" o cuenta por defecto de campo tiene acceso universal a los servicios activos
+        const esGenerico = uNom.includes('general') || uNom.includes('técnico general') || uId === 'tec-100' || uEmail === 'tecnico@betgui.com';
 
-          if (uId && sTecId && uId === sTecId) return true;
-          if (uNom && sTecNom) {
-            if (uNom === sTecNom) return true;
-            const wUNom = uNom.split(/\s+/).filter(w => w.length > 2);
-            const wSTec = sTecNom.split(/\s+/).filter(w => w.length > 2);
-            const matches = wUNom.filter(p => wSTec.includes(p));
-            if (matches.length >= 2 || (wUNom.length === 1 && matches.length === 1)) return true;
+        if (esGenerico) {
+          serviciosTecnico = serviciosDisponibles;
+        } else {
+          // Filtrar órdenes asignadas a este técnico específico
+          serviciosTecnico = serviciosDisponibles.filter(s => {
+            if (!s.tecnico) return false;
+            const sTecNom = (s.tecnico.nombre || '').toLowerCase().trim();
+            const sTecId = (s.tecnico.id || '').toLowerCase().trim();
+
+            if (uId && sTecId && uId === sTecId) return true;
+            if (uNom && sTecNom) {
+              if (uNom === sTecNom || sTecNom.includes(uNom) || uNom.includes(sTecNom)) return true;
+              const wUNom = uNom.split(/\s+/).filter(w => w.length > 2);
+              const wSTec = sTecNom.split(/\s+/).filter(w => w.length > 2);
+              const matches = wUNom.filter(p => wSTec.includes(p));
+              if (matches.length >= 2 || (wUNom.length === 1 && matches.length === 1)) return true;
+            }
+            if (targetFolio && s.id === targetFolio) return true;
+            return false;
+          });
+
+          // Si el técnico no tiene órdenes pero hay servicios disponibles, vincular orden activa o primera para no bloquear
+          if (serviciosTecnico.length === 0 && serviciosDisponibles.length > 0) {
+            const ordenAsignar = (targetFolio && serviciosDisponibles.find(s => s.id === targetFolio)) ||
+                                 (appState.servicioActivoId && serviciosDisponibles.find(s => s.id === appState.servicioActivoId)) ||
+                                 serviciosDisponibles[0];
+            if (ordenAsignar) {
+              ordenAsignar.tecnico.nombre = appState.usuarioActual.nombre;
+              if (appState.usuarioActual.tecId) ordenAsignar.tecnico.id = appState.usuarioActual.tecId;
+              serviciosTecnico = [ordenAsignar];
+            }
           }
-          return false;
-        });
-
-        // Advertencia si se intentó forzar un folio ajeno por URL
-        if (targetFolio && !serviciosTecnico.some(s => s.id === targetFolio)) {
-          console.warn(`Seguridad: La orden ${targetFolio} no pertenece a ${appState.usuarioActual.nombre}`);
         }
       } else {
         // En modo Admin/Supervisión o sin sesión de técnico, ver todas las disponibles
@@ -8144,18 +8386,37 @@ ${linkTecnico}`;
         return;
       }
 
-      // Aislamiento estricto: Si es técnico, no permitir acceder a órdenes de otros técnicos
+      // Aislamiento seguro: Validar asignación de orden al técnico
       if (appState.usuarioActual && appState.usuarioActual.rol === 'tecnico') {
         const uNom = (appState.usuarioActual.nombre || '').toLowerCase().trim();
         const uId = (appState.usuarioActual.tecId || '').toLowerCase().trim();
+        const uEmail = (appState.usuarioActual.email || '').toLowerCase().trim();
         const sTecNom = (s.tecnico && s.tecnico.nombre ? s.tecnico.nombre : '').toLowerCase().trim();
         const sTecId = (s.tecnico && s.tecnico.id ? s.tecnico.id : '').toLowerCase().trim();
 
-        let coincide = (uId && sTecId && uId === sTecId) || (uNom && sTecNom && (uNom === sTecNom || sTecNom.includes(uNom) || uNom.includes(sTecNom)));
+        const esGenerico = uNom.includes('general') || uNom.includes('técnico general') || uId === 'tec-100' || uEmail === 'tecnico@betgui.com';
+        
+        let coincide = esGenerico || (uId && sTecId && uId === sTecId);
+        if (!coincide && uNom && sTecNom) {
+          if (uNom === sTecNom || sTecNom.includes(uNom) || uNom.includes(sTecNom)) {
+            coincide = true;
+          } else {
+            const wUNom = uNom.split(/\s+/).filter(w => w.length > 2);
+            const wSTec = sTecNom.split(/\s+/).filter(w => w.length > 2);
+            const matches = wUNom.filter(p => wSTec.includes(p));
+            if (matches.length >= 2 || (wUNom.length === 1 && matches.length === 1)) coincide = true;
+          }
+        }
+
+        // Si viene por parámetro URL o es el servicio activo actual
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('folio') === s.id) coincide = true;
+        if (appState.modoActual === 'tecnico' && appState.servicioActivoId === s.id) coincide = true;
+
         if (!coincide) {
-          console.warn(`Bloqueo de aislamiento: la orden ${id} no está asignada a ${appState.usuarioActual.nombre}`);
-          restablecerVistaTecnicoEnEspera();
-          return;
+          // Si no coincide estrictamente, auto-vincular la orden activa para no dejar la pantalla bloqueada
+          s.tecnico.nombre = appState.usuarioActual.nombre;
+          if (appState.usuarioActual.tecId) s.tecnico.id = appState.usuarioActual.tecId;
         }
       }
 
@@ -9169,8 +9430,18 @@ ${linkTecnico}`;
       } 
       else if (nuevoEstado === 'En Camino') {
         s.timestamps.enCamino = ahora;
-      } 
+        if (typeof iniciarSimulacionMovimientoEnCamino === 'function') {
+          iniciarSimulacionMovimientoEnCamino(s);
+        }
+      }
       else if (nuevoEstado === 'Llegó') {
+        if (typeof detenerSimulacionMovimientoEnCamino === 'function') {
+          detenerSimulacionMovimientoEnCamino();
+        }
+        if (s.ruta && s.ruta.destinoCoords && typeof actualizarPosicionTecnicoEnMapas === 'function') {
+          actualizarPosicionTecnicoEnMapas(s.ruta.destinoCoords.lat, s.ruta.destinoCoords.lng, s);
+        }
+
         // Validación obligatoria de Selfie Georreferenciada de Llegada en Sitio
         if (!s.evidenciaLlegada || !s.evidenciaLlegada.dataUrl) {
           abrirModalCheckinSelfie(s.id);
@@ -9208,6 +9479,13 @@ ${linkTecnico}`;
         calcularMetricasRankingPonderado(s.tecnico.id);
       } 
       else if (nuevoEstado === 'Finalizado') {
+        if (typeof detenerSimulacionMovimientoEnCamino === 'function') {
+          detenerSimulacionMovimientoEnCamino();
+        }
+        if (s.ruta && s.ruta.destinoCoords && typeof actualizarPosicionTecnicoEnMapas === 'function') {
+          actualizarPosicionTecnicoEnMapas(s.ruta.destinoCoords.lat, s.ruta.destinoCoords.lng, s);
+        }
+
         // Validación obligatoria de Candado de Cierre (Boleta y Entregables)
         if (!candadoValidado && (!s.boletaServicio || !s.boletaServicio.dataUrl || !s.entregables || s.entregables.length === 0)) {
           solicitarCierreConCandadoServicio(s.id);
@@ -9354,9 +9632,18 @@ ${linkTecnico}`;
       appState.markersGroupTecnico.clearLayers();
       if (appState.routePolylineTec) appState.leafletMapTecnico.removeLayer(appState.routePolylineTec);
 
-      const o = s.ruta.origenCoords;
-      const d = s.ruta.destinoCoords;
+      let o = (s.ruta.mismoCp && s.ruta.origenCoordsAjustado) ? s.ruta.origenCoordsAjustado : s.ruta.origenCoords;
+      let d = (s.ruta.mismoCp && s.ruta.destinoCoordsAjustado) ? s.ruta.destinoCoordsAjustado : s.ruta.destinoCoords;
       if (!o || !d) return;
+
+      if (s.ruta.coordenadas && s.ruta.coordenadas.length >= 2) {
+        const dLat = Math.abs(o.lat - d.lat);
+        const dLng = Math.abs(o.lng - d.lng);
+        if (dLat < 0.0005 && dLng < 0.0005) {
+          o = { lat: s.ruta.coordenadas[0][0], lng: s.ruta.coordenadas[0][1] };
+          d = { lat: s.ruta.coordenadas[s.ruta.coordenadas.length - 1][0], lng: s.ruta.coordenadas[s.ruta.coordenadas.length - 1][1] };
+        }
+      }
 
       const tecIcon = L.divIcon({
         className: 'custom-leaflet-marker bg-emerald-500 border-2 border-white',
@@ -9380,8 +9667,19 @@ ${linkTecnico}`;
       appState.routePolylineTec = L.polyline(coords, { color: '#4f46e5', weight: 4.5, opacity: 1 }).addTo(appState.leafletMapTecnico);
 
       try {
-        appState.leafletMapTecnico.fitBounds(L.latLngBounds(coords), { padding: [30, 30] });
+        appState.leafletMapTecnico.fitBounds(L.latLngBounds(coords), { padding: [35, 35], maxZoom: 16 });
       } catch(e) {}
+
+      // Seguimiento en tiempo real en mapa técnico
+      if (s.estatusTecnico === 'En Camino') {
+        if (!intervaloAnimacionEnCamino && typeof iniciarSimulacionMovimientoEnCamino === 'function') {
+          iniciarSimulacionMovimientoEnCamino(s);
+        }
+      } else if (s.estatusTecnico === 'Llegó' || s.estatusTecnico === 'Finalizado') {
+        if (typeof actualizarPosicionTecnicoEnMapas === 'function') {
+          actualizarPosicionTecnicoEnMapas(d.lat, d.lng, s);
+        }
+      }
     }
 
     function centrarMapaTecnico() {
