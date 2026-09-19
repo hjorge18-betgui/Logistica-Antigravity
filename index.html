@@ -2222,16 +2222,17 @@
       <div class="space-y-2 pt-1">
         <!-- Estado 1: Antes de tomar la foto -->
         <div id="checkinBotonesCaptura" class="space-y-2">
-          <button onclick="capturarSelfieConMarcaDeAgua()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 cursor-pointer">
+          <button type="button" onclick="capturarSelfieConMarcaDeAgua()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 cursor-pointer">
             <i data-lucide="camera" class="w-5 h-5"></i>
-            <span>📸 Capturar Selfie en Sitio Ahora</span>
+            <span>📸 Tomar Selfie con Cámara Frontal</span>
           </button>
+          
           <div class="grid grid-cols-2 gap-2">
-            <button onclick="document.getElementById('checkinSelfieFileInput').click()" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5" title="Abrir cámara nativa del celular">
+            <label for="checkinSelfieFileInput" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer text-center shadow-sm">
               <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
-              <span>Cámara del Celular</span>
-            </button>
-            <button onclick="cargarFotoRealDemoTecnicoCheckin()" class="py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-1.5" title="Cargar foto real de técnico para pruebas en PC">
+              <span>Cámara Celular (Frontal)</span>
+            </label>
+            <button type="button" onclick="cargarFotoRealDemoTecnicoCheckin()" class="py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-1.5" title="Foto real para pruebas en PC">
               <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
               <span>Foto Demo (PC)</span>
             </button>
@@ -3671,6 +3672,44 @@
     let gpsCheckinActual = null;
     let servicioCheckinActualId = null;
 
+    
+    function obtenerCoordenadasDestinoServicio(s) {
+      if (!s) return null;
+      if (s.ruta && s.ruta.destinoCoords && typeof s.ruta.destinoCoords.lat === 'number') {
+        return s.ruta.destinoCoords;
+      }
+      if (s.cliente && typeof s.cliente.lat === 'number' && typeof s.cliente.lng === 'number') {
+        return { lat: s.cliente.lat, lng: s.cliente.lng };
+      }
+      if (s.ruta && Array.isArray(s.ruta.coordenadas) && s.ruta.coordenadas.length > 0) {
+        const last = s.ruta.coordenadas[s.ruta.coordenadas.length - 1];
+        if (Array.isArray(last) && last.length >= 2) return { lat: last[0], lng: last[1] };
+        if (last && typeof last.lat === 'number') return last;
+      }
+      return null;
+    }
+
+    async function obtenerGpsPromesa() {
+      if (gpsCheckinActual) return gpsCheckinActual;
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            procesarPosicionGpsDispositivo(pos, 'GPS Celular');
+            resolve(gpsCheckinActual);
+          },
+          (err) => {
+            console.warn('Fallo lectura GPS dispositivo:', err.message);
+            resolve(null);
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+      });
+    }
+
     function calcularDistanciaGeodesicaKm(lat1, lon1, lat2, lon2) {
       if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return 0;
       const R = 6371; // Radio medio de la Tierra en km
@@ -3764,51 +3803,36 @@
 
       detenerCamaraFrontal();
 
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: 'user' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
-          });
-          streamCamaraCheckin = stream;
-          if (video) {
-            video.srcObject = stream;
-            video.setAttribute('playsinline', 'true');
-            await video.play();
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Intentos progresivos para cámara frontal: 1. facingMode: "user", 2. facingMode: { ideal: "user" }, 3. genérico
+        const intentos = [
+          { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+          { video: { facingMode: { ideal: 'user' } }, audio: false },
+          { video: true, audio: false }
+        ];
+
+        for (const constraints of intentos) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            streamCamaraCheckin = stream;
+            if (video) {
+              video.srcObject = stream;
+              video.muted = true;
+              video.setAttribute('muted', '');
+              video.setAttribute('playsinline', 'true');
+              video.setAttribute('autoplay', 'true');
+              await video.play().catch(e => console.warn('video.play aviso:', e));
+            }
+            if (loader) loader.classList.add('hidden');
+            return;
+          } catch (errIntento) {
+            console.warn('Intento de cámara falló:', errIntento.name);
           }
-          if (loader) loader.classList.add('hidden');
-          return;
-        }
-      } catch (err1) {
-        console.warn('Fallo getUserMedia con facingMode user, intentando fallback genérico:', err1);
-        try {
-          const streamFall = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          streamCamaraCheckin = streamFall;
-          if (video) {
-            video.srcObject = streamFall;
-            video.setAttribute('playsinline', 'true');
-            await video.play();
-          }
-          if (loader) loader.classList.add('hidden');
-          return;
-        } catch (err2) {
-          console.warn('No se pudo acceder a la cámara directamente:', err2);
         }
       }
 
       if (loader) loader.classList.add('hidden');
-      console.warn('getUserMedia no disponible, activando input nativo de cámara móvil');
-      // Si estamos en celular, disparar la cámara del sistema operativo directamente
-      const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (esMovil) {
-        document.getElementById('checkinSelfieFileInput').click();
-      } else {
-        mostrarToast('ℹ️ Cámara web no detectada en PC. Usa "Cámara del Celular" o "Foto Demo (PC)".');
-      }
+      mostrarToast('📷 Si no ves tu cámara en vivo, pulsa "Cámara Celular (Frontal)" para capturarla directamente.');
     }
 
     function detenerCamaraFrontal() {
@@ -3905,18 +3929,21 @@
       };
 
       const s = appState.servicios.find(item => item.id === servicioCheckinActualId);
-      const destCoords = (s && s.ruta && s.ruta.destinoCoords) ? s.ruta.destinoCoords : null;
+      const destCoords = obtenerCoordenadasDestinoServicio(s);
 
       let distKm = 0;
-      if (destCoords && destCoords.lat && destCoords.lng) {
+      let tieneDestino = false;
+      if (destCoords && typeof destCoords.lat === 'number' && typeof destCoords.lng === 'number') {
         distKm = calcularDistanciaGeodesicaKm(lat, lng, destCoords.lat, destCoords.lng);
-      } else {
-        distKm = 0.03;
+        tieneDestino = true;
       }
 
-      // Se considera "En Sitio" si el dispositivo celular está a menos de 250 metros del cliente
-      const enSitio = distKm <= 0.25;
-      const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(2)} km`;
+      // Tolerancia: En sitio si está a 350 metros o dentro del margen de precisión satelital
+      const radioToleranciaKm = Math.max(0.35, (precision + 150) / 1000);
+      const enSitio = tieneDestino ? (distKm <= radioToleranciaKm) : true;
+      const distStr = tieneDestino 
+        ? (distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(2)} km`)
+        : 'Ubicación Auditada';
 
       gpsCheckinActual = {
         lat: lat,
@@ -4011,14 +4038,54 @@
         sla: { nivel: '1h', estatus: 'Cumplido' }
       };
 
-      const gps = gpsCheckinActual || gpsDispositivoCache || {
-        lat: 19.432608,
-        lng: -99.133209,
-        precisionMetros: 15,
-        distanciaStr: 'En Sitio (< 50m)',
-        enSitio: true,
-        origen: 'GPS Celular'
-      };
+      let gps = gpsCheckinActual || gpsDispositivoCache;
+      const destCoords = obtenerCoordenadasDestinoServicio(s);
+
+      let latStr = 'N/D';
+      let lngStr = 'N/D';
+      let precStr = '±15m';
+      let statusSitio = '⚠️ UBICACIÓN NO VALIDADA';
+      let badgeTexto = '⚠️ NO AUDITADO: SIN GPS';
+      let badgeColor = '#f43f5e'; // rojo
+
+      if (gps && typeof gps.lat === 'number' && typeof gps.lng === 'number' && gps.lat !== 0) {
+        latStr = gps.lat.toFixed(6);
+        lngStr = gps.lng.toFixed(6);
+        precStr = `±${gps.precisionMetros || 15}m`;
+
+        let distKm = 0;
+        let tieneDest = false;
+        if (destCoords && typeof destCoords.lat === 'number' && typeof destCoords.lng === 'number') {
+          distKm = calcularDistanciaGeodesicaKm(gps.lat, gps.lng, destCoords.lat, destCoords.lng);
+          tieneDest = true;
+        }
+
+        const radioTolerancia = Math.max(0.35, ((gps.precisionMetros || 20) + 150) / 1000);
+        const enSitioReal = tieneDest ? (distKm <= radioTolerancia) : true;
+        const dStr = tieneDest ? (distKm < 1 ? `${Math.round(distKm * 1000)}m` : `${distKm.toFixed(2)}km`) : 'En Sitio';
+
+        gps.enSitio = enSitioReal;
+        gps.distanciaStr = dStr;
+
+        if (enSitioReal) {
+          statusSitio = `✅ EN SITIO DEL CLIENTE (${dStr})`;
+          badgeTexto = '🛡️ GPS AUDITADO EN SITIO';
+          badgeColor = '#06b6d4'; // cian
+        } else {
+          statusSitio = `⚠️ FUERA DE SITIO (A ${dStr} DEL DESTINO)`;
+          badgeTexto = `⚠️ AUDITORÍA: A ${dStr} DE SITIO`;
+          badgeColor = '#f59e0b'; // ámbar
+        }
+      } else {
+        gps = {
+          lat: 0,
+          lng: 0,
+          precisionMetros: 9999,
+          distanciaStr: 'Sin GPS',
+          enSitio: false,
+          origen: 'Permiso Denegado'
+        };
+      }
 
       const ahora = new Date();
       const fechaStr = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -4038,22 +4105,22 @@
       ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
       ctx.fillRect(0, bannerY, w, bannerH);
 
-      // Línea divisoria cian brillante
-      ctx.fillStyle = '#06b6d4';
+      // Línea divisoria cian brillante o advertencia
+      ctx.fillStyle = badgeColor;
       ctx.fillRect(0, bannerY, w, 3);
 
-      // Insignia superior derecha: "CERTIFICADO BET-GUI"
-      const badgeW = 245;
+      // Insignia superior derecha con verificación real
+      const badgeW = 260;
       const badgeH = 30;
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
       ctx.fillRect(w - badgeW - 12, 12, badgeW, badgeH);
-      ctx.strokeStyle = '#06b6d4';
+      ctx.strokeStyle = badgeColor;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(w - badgeW - 12, 12, badgeW, badgeH);
 
-      ctx.fillStyle = '#22d3ee';
+      ctx.fillStyle = badgeColor;
       ctx.font = 'bold 11px monospace';
-      ctx.fillText('🛡️ GPS CELULAR AUDITADO EN SITIO', w - badgeW - 2, 31);
+      ctx.fillText(badgeTexto, w - badgeW - 2, 31);
 
       // Textos de la marca de agua en la franja inferior
       const padX = 18;
@@ -4082,14 +4149,11 @@
       const dirCompleta = `📍 DIR: ${cliDir}, ${cliCd} (CP: ${cliCp})`;
       ctx.fillText(dirCompleta.substring(0, 75), padX, textY);
 
-      // Línea 3: Coordenadas GPS reales del dispositivo celular y distancia
+      // Línea 3: Coordenadas GPS reales auditadas del dispositivo celular
       textY += 20;
       ctx.font = 'bold 11px monospace';
-      ctx.fillStyle = '#34d399';
-      const statusSitio = gps.enSitio ? 'EN SITIO' : `FUERA DE SITIO (${gps.distanciaStr})`;
-      const latStr = (typeof gps.lat === 'number') ? gps.lat.toFixed(6) : gps.lat;
-      const lngStr = (typeof gps.lng === 'number') ? gps.lng.toFixed(6) : gps.lng;
-      ctx.fillText(`📱 GPS: ${latStr}, ${lngStr} (±${gps.precisionMetros}m)  |  ${statusSitio}`, padX, textY);
+      ctx.fillStyle = gps.enSitio ? '#34d399' : '#fbbf24';
+      ctx.fillText(`📱 GPS: ${latStr}, ${lngStr} (${precStr})  |  ${statusSitio}`, padX, textY);
 
       // Línea 4: Fecha, Hora exacta y SLA
       textY += 20;
@@ -4135,19 +4199,21 @@
       mostrarToast('📸 Selfie frontal sellada y georreferenciada con éxito.');
     }
 
-    function capturarSelfieConMarcaDeAgua() {
+    async function capturarSelfieConMarcaDeAgua() {
       const video = document.getElementById('checkinSelfieVideo');
       const canvas = document.getElementById('checkinSelfieCanvas');
 
-      // Si la cámara no está activa o el stream de video aún no emite cuadros
+      // Si la cámara en vivo no está emitiendo cuadros, invocar input nativo de cámara frontal
       if (!video || !video.videoWidth || video.videoWidth === 0 || (!video.srcObject && !streamCamaraCheckin)) {
-        const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if (esMovil) {
-          document.getElementById('checkinSelfieFileInput').click();
-          return;
-        }
-        cargarFotoRealDemoTecnicoCheckin();
+        const inSelfie = document.getElementById('checkinSelfieFileInput');
+        if (inSelfie) inSelfie.click();
         return;
+      }
+
+      // Asegurar lectura de GPS real del dispositivo antes de estampar
+      if (!gpsCheckinActual) {
+        mostrarToast('📡 Leyendo coordenadas GPS en tiempo real del celular...');
+        await obtenerGpsPromesa();
       }
 
       const w = video.videoWidth || 640;
@@ -4172,8 +4238,15 @@
       img.src = fotoBase64;
     }
 
-    function cargarSelfieDesdeArchivo(file) {
+    async function cargarSelfieDesdeArchivo(file) {
       if (!file) return;
+
+      // Asegurar GPS real antes de estampar foto de cámara
+      if (!gpsCheckinActual) {
+        mostrarToast('📡 Obteniendo GPS real del celular para sellar foto...');
+        await obtenerGpsPromesa();
+      }
+
       const reader = new FileReader();
       reader.onload = function(e) {
         const img = new Image();
@@ -4239,6 +4312,13 @@
 
       // Transición formal de estatus a 'Llegó'
       cambiarEstadoDesdeTecnico('Llegó');
+
+      // Advertencia de Auditoría si el técnico está fuera de sitio
+      if (s.evidenciaLlegada && s.evidenciaLlegada.gps && !s.evidenciaLlegada.gps.enSitio) {
+        const dStr = s.evidenciaLlegada.distanciaStr || 'fuera de sitio';
+        const confirmarFuera = confirm(`⚠️ ALERTA DE AUDITORÍA:\nEl GPS de tu celular indica que estás a ${dStr} del sitio del cliente.\n\nTu ubicación real (${s.evidenciaLlegada.gps.lat}, ${s.evidenciaLlegada.gps.lng}) quedará sellada permanentemente en la foto y enviada a Despacho Central.\n\n¿Deseas confirmar el arribo con esta ubicación?`);
+        if (!confirmarFuera) return;
+      }
 
       // Compartir y Enviar Selfie por WhatsApp (Sin residuo en teléfono móvil)
       await compartirOEnviarSelfieWhatsApp(s.id, '525585601910', false);
@@ -6031,6 +6111,46 @@
     /**
      * GESTIÓN DE FORMULARIO DE CAPTURA / EDICIÓN MANUAL
      */
+    
+    function habilitarCamposFormularioCaptura(habilitar = true) {
+      const inputsForm = [
+        'cliNombre', 'cliDireccion', 'cliEstado', 'cliCiudad', 'cliCp', 'cliTelefono',
+        'tecSeleccionadoDropdown', 'tecNombre', 'tecDireccion', 'tecEstado', 'tecCiudad',
+        'tecCp', 'tecTelefono', 'tecHoraInicio', 'slaSeleccionado'
+      ];
+      inputsForm.forEach(idInput => {
+        const elInp = document.getElementById(idInput);
+        if (elInp) {
+          elInp.disabled = !habilitar;
+          elInp.readOnly = !habilitar;
+          if (habilitar) {
+            elInp.classList.remove('opacity-60', 'cursor-not-allowed');
+          } else {
+            elInp.classList.add('opacity-60', 'cursor-not-allowed');
+          }
+        }
+      });
+
+      const btnCalc = document.getElementById('btnCalcularRutaManual');
+      if (btnCalc) {
+        btnCalc.disabled = !habilitar;
+        if (habilitar) {
+          btnCalc.className = "w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer";
+          btnCalc.innerHTML = '<i data-lucide="zap" class="w-4 h-4"></i><span>Calcular Ruta Vial, SLA y Despachar</span>';
+        } else {
+          btnCalc.className = "w-full py-3 bg-slate-800 text-slate-400 font-bold rounded-xl border border-slate-700/50 flex items-center justify-center gap-2 cursor-not-allowed opacity-60";
+          btnCalc.innerHTML = '<i data-lucide="lock" class="w-4 h-4 text-amber-400"></i><span>Servicio en Historial Finalizado (Solo Lectura - No Modificable)</span>';
+        }
+      }
+
+      const avisoFinalizado = document.getElementById('formFinalizadoAvisoBox');
+      if (avisoFinalizado && habilitar) {
+        avisoFinalizado.classList.add('hidden');
+        avisoFinalizado.innerHTML = '';
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
     function cargarServicioEnFormulario(s) {
       if (!s) return;
       appState.ordenEnEdicionId = s.id;
@@ -6146,6 +6266,9 @@
       appState.ordenEnEdicionId = null;
       appState.forzarNuevaOrden = true;
 
+      // Habilitar de inmediato todos los campos del formulario para nueva captura
+      habilitarCamposFormularioCaptura(true);
+
       const inCliNom = document.getElementById('cliNombre');
       const inCliDir = document.getElementById('cliDireccion');
       const inCliEst = document.getElementById('cliEstado');
@@ -6164,8 +6287,9 @@
       if (inCliTel) inCliTel.value = '';
 
       actualizarIndicadorModoEdicion();
-      mostrarToast('✨ Formulario listo para capturar una NUEVA orden.');
+      mostrarToast('✨ Formulario listo para capturar un NUEVO servicio en Cliente & Destino.');
       if (inCliNom) inCliNom.focus();
+      if (window.lucide) lucide.createIcons();
     }
 
     function actualizarIndicadorModoEdicion() {
