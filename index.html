@@ -1598,7 +1598,7 @@
             <i data-lucide="camera" class="w-4 h-4"></i>
             <span>Llegué al Sitio</span>
           </button>
-          <button onclick="cambiarEstadoDesdeTecnico('Finalizado')" class="py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/30">
+          <button onclick="solicitarCierreConCandadoServicio()" class="py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/30">
             <i data-lucide="award" class="w-4 h-4"></i>
             <span>Finalizar Trabajo</span>
           </button>
@@ -1964,7 +1964,152 @@
     </div>
   </div>
 
-  <!-- MODAL: VISOR DE EVIDENCIAS -->
+    <!-- ================================================================= -->
+  <!-- MODAL: CANDADO DE FINALIZACIÓN DE TRABAJO (BOLETA Y ENTREGABLES) -->
+  <!-- ================================================================= -->
+  <div id="modalFinalizarTrabajoCandado" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 hidden" onclick="if(event.target===this)cerrarModalCandadoCierre()">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[92vh] overflow-y-auto">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+            <i data-lucide="lock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-1.5">
+              <span>Candado de Finalización de Servicio</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">Cierre Obligatorio</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">Adjunta la boleta firmada y los entregables requeridos para validar el cierre.</p>
+          </div>
+        </div>
+        <button onclick="cerrarModalCandadoCierre()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Banner Modo Seguro (Sin evidencia en el teléfono) -->
+      <div class="bg-emerald-950/40 border border-emerald-600/30 rounded-xl p-2.5 flex items-center gap-2.5 text-xs text-emerald-300">
+        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+        <div class="text-[11px] leading-tight">
+          <span class="font-bold block text-emerald-200">🛡️ Modo Seguro Operativo</span>
+          Los documentos se transmiten encriptados a Central. <strong class="text-emerald-100">No se guarda copia ni evidencia en la memoria de este teléfono.</strong>
+        </div>
+      </div>
+
+      <!-- Datos de la Orden -->
+      <div class="grid grid-cols-2 gap-2 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+        <div>
+          <span class="text-[10px] text-slate-400 block">Orden a Finalizar</span>
+          <span id="candadoFolioText" class="font-bold text-indigo-400">#TK-1001</span>
+          <p id="candadoClienteText" class="text-[11px] text-slate-300 truncate">Cliente</p>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-400 block">Técnico Responsable</span>
+          <span id="candadoTecNombreText" class="font-bold text-white truncate">Técnico</span>
+          <p id="candadoTiempoSitioText" class="text-[10px] text-cyan-400">En Sitio: 45 min</p>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 1: BOLETA DE SERVICIO FIRMADA (OBLIGATORIA) -->
+      <div class="space-y-2 border border-slate-800 rounded-xl p-3 bg-slate-950/60">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <i data-lucide="file-check-2" class="w-4 h-4 text-amber-400"></i>
+            <span>1. Boleta de Servicio Firmada <span class="text-rose-400">*</span></span>
+          </label>
+          <span id="candadoBoletaBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">Pendiente (PDF/Imagen)</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Sube la boleta u orden física firmada por el cliente (PDF, JPG, PNG).</p>
+
+        <!-- Preview o Placeholder de Boleta -->
+        <div id="candadoBoletaPreviewContenedor" class="hidden relative rounded-xl border border-emerald-500/40 bg-slate-900 p-2 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <div id="candadoBoletaIcono" class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <i data-lucide="file-text" class="w-5 h-5"></i>
+            </div>
+            <div class="truncate text-xs">
+              <p id="candadoBoletaNombre" class="font-bold text-white truncate">Boleta_Firmada.pdf</p>
+              <p id="candadoBoletaDetalle" class="text-[10px] text-slate-400">PDF · 240 KB · En Memoria</p>
+            </div>
+          </div>
+          <button onclick="eliminarBoletaCierre()" class="p-1.5 bg-rose-500/20 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg transition" title="Quitar archivo">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Botones para capturar o subir Boleta -->
+        <div id="candadoBoletaBotones" class="grid grid-cols-2 gap-2">
+          <button onclick="document.getElementById('inputBoletaCamara').click()" class="py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+            <span>Tomar Foto Boleta</span>
+          </button>
+          <button onclick="document.getElementById('inputBoletaArchivo').click()" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            <span>Subir PDF / Imagen</span>
+          </button>
+        </div>
+
+        <!-- Inputs ocultos para Boleta -->
+        <input type="file" id="inputBoletaCamara" accept="image/*" capture="environment" class="hidden" onchange="cargarArchivoBoletaCandado(this.files[0])" />
+        <input type="file" id="inputBoletaArchivo" accept=".pdf,image/jpeg,image/png,image/webp" class="hidden" onchange="cargarArchivoBoletaCandado(this.files[0])" />
+      </div>
+
+      <!-- SECCIÓN 2: ENTREGABLES DE SERVICIO (OBLIGATORIOS) -->
+      <div class="space-y-2 border border-slate-800 rounded-xl p-3 bg-slate-950/60">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <i data-lucide="package-check" class="w-4 h-4 text-cyan-400"></i>
+            <span>2. Entregables de Servicio <span class="text-rose-400">*</span></span>
+          </label>
+          <span id="candadoEntregablesBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">0 Archivos (PDF/Imagen)</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Adjunta evidencias fotográficas del trabajo concluido, reportes técnicos o memorias (PDF, JPG, PNG).</p>
+
+        <!-- Lista de Entregables cargados -->
+        <div id="candadoEntregablesLista" class="space-y-1.5 max-h-36 overflow-y-auto">
+          <!-- Renderizado dinámico de entregables -->
+          <div id="candadoEntregablesEmpty" class="text-center py-3 text-slate-500 text-xs italic bg-slate-900/50 rounded-lg border border-dashed border-slate-800">
+            Ningún entregable adjuntado aún.
+          </div>
+        </div>
+
+        <!-- Botones para agregar Entregables -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="document.getElementById('inputEntregablesCamara').click()" class="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+            <span>Foto de Trabajo</span>
+          </button>
+          <button onclick="document.getElementById('inputEntregablesArchivos').click()" class="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+            <span>Adjuntar PDF / Fotos</span>
+          </button>
+        </div>
+
+        <!-- Inputs ocultos para Entregables -->
+        <input type="file" id="inputEntregablesCamara" accept="image/*" capture="environment" class="hidden" onchange="agregarArchivosEntregablesCandado(this.files)" />
+        <input type="file" id="inputEntregablesArchivos" accept=".pdf,image/jpeg,image/png,image/webp" multiple class="hidden" onchange="agregarArchivosEntregablesCandado(this.files)" />
+      </div>
+
+      <!-- Notas / Observaciones Finales (Opcional) -->
+      <div class="space-y-1">
+        <label class="text-[11px] font-bold text-slate-300">Notas / Observaciones de Cierre (Opcional):</label>
+        <textarea id="candadoObservacionesCierre" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" placeholder="Ej: Trabajo completado a entera satisfacción del cliente. Equipos probados y operando..."></textarea>
+      </div>
+
+      <!-- Botón de Cierre con Validación de Candado -->
+      <div class="pt-2">
+        <button onclick="validarCandadoYFinalizarServicio()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30">
+          <i data-lucide="lock-keyhole-open" class="w-4 h-4"></i>
+          <span>Validar Candado y Finalizar Servicio</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+<!-- MODAL: VISOR DE EVIDENCIAS -->
   <div id="modalVerEvidencia" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden" onclick="if(event.target===this)cerrarModalVerEvidencia()">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl p-5 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -2091,10 +2236,10 @@
               <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
               <span>Repetir Foto</span>
             </button>
-            <button onclick="descargarFotoSellada()" class="py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Descargar Foto</span>
-            </button>
+            <div class="py-2 bg-slate-800/80 text-emerald-400 font-medium text-xs rounded-xl border border-slate-700/60 flex items-center justify-center gap-1.5 text-center" title="La selfie se transmite cifrada a Central sin almacenarse en este teléfono">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+              <span class="truncate">Sin evidencia en móvil</span>
+            </div>
           </div>
           
           <button onclick="confirmarLlegadaSitioYEnviarWhatsApp()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30">
@@ -3870,11 +4015,11 @@
       // ============================================
       // DIBUJAR MARCA DE AGUA Y OVERLAY GEOREFERENCIADO
       // ============================================
-      const bannerH = Math.min(125, Math.max(112, Math.round(h * 0.25)));
+      const bannerH = Math.min(145, Math.max(130, Math.round(h * 0.28)));
       const bannerY = h - bannerH;
 
       // Franja oscura con transparencia
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.90)';
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
       ctx.fillRect(0, bannerY, w, bannerH);
 
       // Línea divisoria cian brillante
@@ -3882,9 +4027,9 @@
       ctx.fillRect(0, bannerY, w, 3);
 
       // Insignia superior derecha: "CERTIFICADO BET-GUI"
-      const badgeW = 230;
+      const badgeW = 245;
       const badgeH = 30;
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.80)';
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
       ctx.fillRect(w - badgeW - 12, 12, badgeW, badgeH);
       ctx.strokeStyle = '#06b6d4';
       ctx.lineWidth = 1.5;
@@ -3892,7 +4037,7 @@
 
       ctx.fillStyle = '#22d3ee';
       ctx.font = 'bold 11px monospace';
-ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
+      ctx.fillText('🛡️ GPS CELULAR AUDITADO EN SITIO', w - badgeW - 2, 31);
 
       // Textos de la marca de agua en la franja inferior
       const padX = 18;
@@ -3901,34 +4046,41 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
       // Título
       ctx.font = 'bold 14px sans-serif';
       ctx.fillStyle = '#38bdf8';
-      ctx.fillText(`BET-GUI LOGÍSTICA | ARRIBO GEOREFERENCIADO EN SITIO`, padX, textY);
+      ctx.fillText(`BET-GUI LOGÍSTICA | CHECK-IN GEOREFERENCIADO EN SITIO`, padX, textY);
 
       // Línea 1: Folio, Técnico y Calificación
-      textY += 20;
+      textY += 21;
       ctx.font = 'bold 12px sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(`FOLIO: #${s.id}  |  TÉCNICO: ${s.tecnico ? s.tecnico.nombre : 'Técnico'} (⭐ ${s.tecnico ? s.tecnico.ranking || '5.0' : '5.0'})`, padX, textY);
+      const tecNom = s.tecnico ? s.tecnico.nombre : 'Técnico';
+      const tecRank = s.tecnico ? (s.tecnico.ranking || '5.0') : '5.0';
+      ctx.fillText(`FOLIO: #${s.id}  |  TÉCNICO: ${tecNom} (⭐ ${tecRank})`, padX, textY);
 
-      // Línea 2: Cliente y Destino
-      textY += 19;
-      ctx.font = 'normal 11px sans-serif';
-      ctx.fillStyle = '#cbd5e1';
-      const clienteStr = `${s.cliente.nombre} - ${s.cliente.ciudad || ''}`;
-      ctx.fillText(`CLIENTE: ${clienteStr.substring(0, 60)}`, padX, textY);
+      // Línea 2: Dirección completa y Código Postal (Requisito Explícito)
+      textY += 21;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#fef08a';
+      const cliDir = (s.cliente && s.cliente.direccion) ? s.cliente.direccion : 'Sitio de Atención';
+      const cliCd = (s.cliente && s.cliente.ciudad) ? s.cliente.ciudad : '';
+      const cliCp = (s.cliente && s.cliente.cp) ? s.cliente.cp : 'N/D';
+      const dirCompleta = `📍 DIR: ${cliDir}, ${cliCd} (CP: ${cliCp})`;
+      ctx.fillText(dirCompleta.substring(0, 75), padX, textY);
 
-      // Línea 3: Coordenadas GPS reales del dispositivo celular y distancia calculada al cliente
-      textY += 19;
+      // Línea 3: Coordenadas GPS reales del dispositivo celular y distancia
+      textY += 20;
       ctx.font = 'bold 11px monospace';
       ctx.fillStyle = '#34d399';
       const statusSitio = gps.enSitio ? 'EN SITIO' : `FUERA DE SITIO (${gps.distanciaStr})`;
-      ctx.fillText(`📱 GPS CELULAR: ${gps.lat}, ${gps.lng} (±${gps.precisionMetros}m)  |  ${statusSitio}`, padX, textY);
+      const latStr = (typeof gps.lat === 'number') ? gps.lat.toFixed(6) : gps.lat;
+      const lngStr = (typeof gps.lng === 'number') ? gps.lng.toFixed(6) : gps.lng;
+      ctx.fillText(`📱 GPS: ${latStr}, ${lngStr} (±${gps.precisionMetros}m)  |  ${statusSitio}`, padX, textY);
 
-      // Línea 4: Fecha, Hora y SLA
-      textY += 19;
+      // Línea 4: Fecha, Hora exacta y SLA
+      textY += 20;
       ctx.font = 'normal 11px sans-serif';
-      ctx.fillStyle = '#94a3b8';
-      const slaStr = `SLA: ${s.sla ? s.sla.nivel : '1h'} (${s.sla ? s.sla.estatus : 'Cumplido'})  |  Tiempo Aceptación->Sitio: ${minutosTranscurridos} min`;
-      ctx.fillText(`FECHA/HORA: ${fechaStr} ${horaStr}  |  ${slaStr}`, padX, textY);
+      ctx.fillStyle = '#cbd5e1';
+      const slaStr = `SLA: ${s.sla ? s.sla.nivel : '1h'} (${s.sla ? s.sla.estatus : 'Cumplido'})`;
+      ctx.fillText(`📅 FECHA: ${fechaStr}  ⏰ HORA: ${horaStr}  |  ${slaStr}`, padX, textY);
 
       const mapsUrl = `https://www.google.com/maps?q=${gps.lat},${gps.lng}`;
       const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
@@ -4035,16 +4187,7 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
     }
 
     function descargarFotoSellada() {
-      if (!evidenciaSelfieTemporal || !evidenciaSelfieTemporal.dataUrl) {
-        alert('No hay foto sellada disponible para descargar.');
-        return;
-      }
-      const a = document.createElement('a');
-      a.href = evidenciaSelfieTemporal.dataUrl;
-      a.download = `BetGui_SelfieCheckIn_${servicioCheckinActualId || 'TK'}_${Date.now()}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      mostrarToast('🛡️ Modo Seguro: La selfie georreferenciada se transmite a Central sin guardarse en este teléfono.');
     }
 
     async function confirmarLlegadaSitioYEnviarWhatsApp() {
@@ -4076,8 +4219,8 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
       // Transición formal de estatus a 'Llegó'
       cambiarEstadoDesdeTecnico('Llegó');
 
-      // Compartir y Enviar Selfie por WhatsApp
-      await compartirOEnviarSelfieWhatsApp(s.id, '525585601910');
+      // Compartir y Enviar Selfie por WhatsApp (Sin residuo en teléfono móvil)
+      await compartirOEnviarSelfieWhatsApp(s.id, '525585601910', false);
 
       guardarEnAlmacenamientoLocal();
       renderizarCarpetaSelfiesAdmin();
@@ -4152,7 +4295,7 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
       }
     }
 
-    async function compartirOEnviarSelfieWhatsApp(servicioId, telefonoDestino) {
+    async function compartirOEnviarSelfieWhatsApp(servicioId, telefonoDestino, descargarEnEquipo = false) {
       const s = appState.servicios.find(item => item.id === servicioId);
       if (!s || !s.evidenciaLlegada || !s.evidenciaLlegada.dataUrl) {
         alert('No se encontró la selfie georreferenciada para este servicio.');
@@ -4166,8 +4309,10 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
 
       const mensajeWhatsApp = `ESTATUS CONFIRMADO: El técnico está físicamente en sitio. Selfie frontal sellada y georreferenciada capturada con éxito.`;
 
-      // 1. Descargar archivo al equipo
-      descargarSelfieArchivo(ev.dataUrl, `BetGui_Selfie_CheckIn_${s.id}.jpg`);
+      // 1. Descargar archivo al equipo solo si se solicita explícitamente desde Admin
+      if (descargarEnEquipo) {
+        descargarSelfieArchivo(ev.dataUrl, `BetGui_Selfie_CheckIn_${s.id}.jpg`);
+      }
 
       // 2. Intentar copiar al portapapeles
       copiarImagenAlPortapapeles(ev.dataUrl);
@@ -4183,7 +4328,7 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
               title: `Selfie Check-in Folio #${s.id}`,
               text: mensajeWhatsApp
             });
-            mostrarToast(`✅ Selfie compartida vía WhatsApp exitosamente.`);
+            mostrarToast(`✅ Selfie transmitida vía WhatsApp sin huella en el teléfono.`);
             return;
           } catch(e) {
             if (e.name !== 'AbortError') console.warn('Web Share omitido:', e);
@@ -4194,7 +4339,7 @@ ctx.fillText('🛡️ GPS CELULAR DISPOSITIVO AUDITADO', w - badgeW - 2, 31);
       // 4. Redirección a WhatsApp Web / App
       const wpUrl = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensajeWhatsApp)}`;
       window.open(wpUrl, '_blank');
-      mostrarToast(`📸 Selfie descargada y copiada al portapapeles. En WhatsApp presiona Pegar (Ctrl+V) para enviar la foto.`);
+      mostrarToast(`🛡️ Sello Georreferenciado registrado en Central. Sin evidencia local en el dispositivo.`);
     }
 
     function abrirModalEnviarSelfieWhatsApp(id) {
@@ -6850,8 +6995,20 @@ ${linkTecnico}`;
           : '';
 
         const btnVerSelfie = (s.evidenciaLlegada && s.evidenciaLlegada.dataUrl)
-          ? `<button onclick="verEvidenciaCheckin('${s.id}')" title="Ver Selfie Georreferenciada de Llegada en Sitio" class="p-1 rounded bg-cyan-600/20 hover:bg-cyan-600 text-cyan-400 hover:text-white transition">
+          ? `<button onclick="verEvidenciaCheckin('${s.id}')" title="Ver Selfie Georreferenciada de Arribo en Sitio" class="p-1 rounded bg-cyan-600/20 hover:bg-cyan-600 text-cyan-400 hover:text-white transition">
                <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+             </button>`
+          : '';
+
+        const btnVerBoleta = (s.boletaServicio && s.boletaServicio.dataUrl)
+          ? `<button onclick="verBoletaServicio('${s.id}')" title="Ver Boleta de Servicio Firmada" class="p-1 rounded bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white transition">
+               <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i>
+             </button>`
+          : '';
+
+        const btnVerEntregables = (s.entregables && s.entregables.length > 0)
+          ? `<button onclick="verEntregablesServicio('${s.id}')" title="Ver Entregables de Servicio (${s.entregables.length})" class="p-1 rounded bg-purple-600/20 hover:bg-purple-600 text-purple-400 hover:text-white transition">
+               <i data-lucide="package-check" class="w-3.5 h-3.5"></i>
              </button>`
           : '';
 
@@ -6893,6 +7050,8 @@ ${linkTecnico}`;
           <td class="p-2.5 text-right whitespace-nowrap">
             <div class="flex items-center justify-end gap-1">
               ${btnVerSelfie}
+              ${btnVerBoleta}
+              ${btnVerEntregables}
               ${btnAsignarNuevo}
               ${btnJustificar}
               <button onclick="despacharWhatsApp('${s.id}')" title="${wpBtnTitle}" class="${wpBtnClass}">
@@ -7726,7 +7885,401 @@ ${linkTecnico}`;
       }
     }
 
-    function cambiarEstadoDesdeTecnico(nuevoEstado) {
+    
+    /**
+     * =========================================================================
+     * CANDADO DE CIERRE DE SERVICIO (BOLETA Y ENTREGABLES OBLIGATORIOS)
+     * =========================================================================
+     */
+    let boletaCierreTemporal = null;
+    let entregablesCierreTemporales = [];
+    let servicioCierreActualId = null;
+
+    function formatearTamanoBytes(bytes) {
+      if (!bytes) return '100 KB';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function solicitarCierreConCandadoServicio(id) {
+      if (!id) {
+        const select = document.getElementById('tecOrdenSelect');
+        if (select && select.value) id = select.value;
+      }
+      if (!id && appState.servicioActivoId) id = appState.servicioActivoId;
+      if (!id && appState.servicios.length > 0) id = appState.servicios[0].id;
+
+      const s = appState.servicios.find(item => item.id === id);
+      if (!s) {
+        alert('No hay ninguna orden de servicio seleccionada.');
+        return;
+      }
+
+      // Verificar si ya registró la llegada al sitio
+      if (s.estatusTecnico !== 'Llegó') {
+        if (s.estatusTecnico === 'Pendiente' || s.estatusTecnico === 'Aceptado' || s.estatusTecnico === 'En Camino') {
+          const confirmar = confirm(`⚠️ El estatus actual es "${s.estatusTecnico}". Para finalizar, primero debes registrar la llegada al sitio con selfie frontal georreferenciada.\n\n¿Deseas abrir la cámara frontal para el check-in ahora?`);
+          if (confirmar) {
+            abrirModalCheckinSelfie(s.id);
+            return;
+          }
+        }
+      }
+
+      servicioCierreActualId = s.id;
+      boletaCierreTemporal = s.boletaServicio ? { ...s.boletaServicio } : null;
+      entregablesCierreTemporales = (s.entregables && Array.isArray(s.entregables)) ? [...s.entregables] : [];
+
+      // Actualizar UI del modal candado
+      const elFolio = document.getElementById('candadoFolioText');
+      if (elFolio) elFolio.innerText = `#${s.id}`;
+
+      const elCli = document.getElementById('candadoClienteText');
+      if (elCli) elCli.innerText = s.cliente ? s.cliente.nombre : 'Cliente';
+
+      const elTec = document.getElementById('candadoTecNombreText');
+      if (elTec) elTec.innerText = s.tecnico ? s.tecnico.nombre : 'Técnico';
+
+      const elTiempo = document.getElementById('candadoTiempoSitioText');
+      if (elTiempo) {
+        const ahora = Date.now();
+        const refSitio = s.timestamps?.enSitio || s.timestamps?.enCamino || s.timestamps?.aceptado;
+        const minSitio = refSitio ? Math.max(1, Math.round((ahora - refSitio) / 60000)) : 30;
+        elTiempo.innerText = `En Sitio: ${minSitio} min`;
+      }
+
+      const elObs = document.getElementById('candadoObservacionesCierre');
+      if (elObs) elObs.value = s.observacionesCierre || '';
+
+      actualizarUICandadoBoleta();
+      actualizarUICandadoEntregables();
+
+      const modal = document.getElementById('modalFinalizarTrabajoCandado');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function cerrarModalCandadoCierre() {
+      const modal = document.getElementById('modalFinalizarTrabajoCandado');
+      if (modal) modal.classList.add('hidden');
+      const inB1 = document.getElementById('inputBoletaCamara');
+      const inB2 = document.getElementById('inputBoletaArchivo');
+      const inE1 = document.getElementById('inputEntregablesCamara');
+      const inE2 = document.getElementById('inputEntregablesArchivos');
+      if (inB1) inB1.value = '';
+      if (inB2) inB2.value = '';
+      if (inE1) inE1.value = '';
+      if (inE2) inE2.value = '';
+    }
+
+    function cargarArchivoBoletaCandado(file) {
+      if (!file) return;
+      const esPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const esImg = file.type.startsWith('image/');
+
+      if (!esPdf && !esImg) {
+        alert('⚠️ Formato no permitido. La Boleta de Servicio debe ser un archivo PDF o una Imagen (JPG, PNG).');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        boletaCierreTemporal = {
+          nombre: file.name || `Boleta_Servicio_${servicioCierreActualId || Date.now()}.${esPdf ? 'pdf' : 'jpg'}`,
+          tipo: file.type || (esPdf ? 'application/pdf' : 'image/jpeg'),
+          tamano: formatearTamanoBytes(file.size),
+          esPdf: esPdf,
+          dataUrl: e.target.result,
+          fechaCaptura: new Date().toISOString()
+        };
+        actualizarUICandadoBoleta();
+        mostrarToast('✅ Boleta de Servicio cargada en memoria segura (sin residuo en teléfono).');
+      };
+      reader.readAsDataURL(file);
+
+      const inB1 = document.getElementById('inputBoletaCamara');
+      const inB2 = document.getElementById('inputBoletaArchivo');
+      if (inB1) inB1.value = '';
+      if (inB2) inB2.value = '';
+    }
+
+    function eliminarBoletaCierre() {
+      boletaCierreTemporal = null;
+      actualizarUICandadoBoleta();
+    }
+
+    function actualizarUICandadoBoleta() {
+      const contPreview = document.getElementById('candadoBoletaPreviewContenedor');
+      const contBotones = document.getElementById('candadoBoletaBotones');
+      const badge = document.getElementById('candadoBoletaBadge');
+      const txtNombre = document.getElementById('candadoBoletaNombre');
+      const txtDetalle = document.getElementById('candadoBoletaDetalle');
+      const boxIcono = document.getElementById('candadoBoletaIcono');
+
+      if (boletaCierreTemporal && boletaCierreTemporal.dataUrl) {
+        if (contPreview) contPreview.classList.remove('hidden');
+        if (contBotones) contBotones.classList.add('hidden');
+        if (badge) {
+          badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+          badge.innerText = "Cargada ✓ (Segura)";
+        }
+        if (txtNombre) txtNombre.innerText = boletaCierreTemporal.nombre;
+        if (txtDetalle) txtDetalle.innerText = `${boletaCierreTemporal.esPdf ? 'PDF' : 'Imagen'} · ${boletaCierreTemporal.tamano} · En Memoria Cifrada`;
+        if (boxIcono) {
+          boxIcono.innerHTML = boletaCierreTemporal.esPdf 
+            ? '<i data-lucide="file-text" class="w-5 h-5 text-rose-400"></i>' 
+            : '<i data-lucide="image" class="w-5 h-5 text-emerald-400"></i>';
+        }
+      } else {
+        if (contPreview) contPreview.classList.add('hidden');
+        if (contBotones) contBotones.classList.remove('hidden');
+        if (badge) {
+          badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+          badge.innerText = "Obligatoria (Pendiente)";
+        }
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function agregarArchivosEntregablesCandado(files) {
+      if (!files || files.length === 0) return;
+
+      Array.from(files).forEach(file => {
+        const esPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        const esImg = file.type.startsWith('image/');
+        if (!esPdf && !esImg) {
+          mostrarToast(`⚠️ "${file.name}" omitido: Solo se permiten archivos PDF o Imágenes.`);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          entregablesCierreTemporales.push({
+            id: 'ent_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            nombre: file.name,
+            tipo: file.type || (esPdf ? 'application/pdf' : 'image/jpeg'),
+            tamano: formatearTamanoBytes(file.size),
+            esPdf: esPdf,
+            dataUrl: e.target.result,
+            fecha: new Date().toISOString()
+          });
+          actualizarUICandadoEntregables();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const inE1 = document.getElementById('inputEntregablesCamara');
+      const inE2 = document.getElementById('inputEntregablesArchivos');
+      if (inE1) inE1.value = '';
+      if (inE2) inE2.value = '';
+    }
+
+    function eliminarEntregableCierre(idEntregable) {
+      entregablesCierreTemporales = entregablesCierreTemporales.filter(e => e.id !== idEntregable);
+      actualizarUICandadoEntregables();
+    }
+
+    function actualizarUICandadoEntregables() {
+      const lista = document.getElementById('candadoEntregablesLista');
+      const badge = document.getElementById('candadoEntregablesBadge');
+      if (!lista || !badge) return;
+
+      const total = entregablesCierreTemporales.length;
+      if (total > 0) {
+        badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        badge.innerText = `${total} Entregable${total > 1 ? 's' : ''} ✓`;
+
+        lista.innerHTML = entregablesCierreTemporales.map(ent => `
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="w-7 h-7 rounded bg-slate-800 flex items-center justify-center shrink-0 ${ent.esPdf ? 'text-rose-400' : 'text-cyan-400'}">
+                <i data-lucide="${ent.esPdf ? 'file-text' : 'image'}" class="w-4 h-4"></i>
+              </div>
+              <div class="truncate">
+                <p class="font-medium text-white truncate text-[11px]">${ent.nombre}</p>
+                <p class="text-[9px] text-slate-400">${ent.esPdf ? 'Documento PDF' : 'Fotografía'} · ${ent.tamano}</p>
+              </div>
+            </div>
+            <button onclick="eliminarEntregableCierre('${ent.id}')" class="text-slate-400 hover:text-rose-400 p-1 rounded transition" title="Eliminar entregable">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `).join('');
+      } else {
+        badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        badge.innerText = "Requeridos (0 adjuntos)";
+        lista.innerHTML = `
+          <div id="candadoEntregablesEmpty" class="text-center py-3 text-slate-500 text-xs italic bg-slate-900/50 rounded-lg border border-dashed border-slate-800">
+            Ningún entregable adjuntado aún.
+          </div>
+        `;
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function validarCandadoYFinalizarServicio() {
+      const s = appState.servicios.find(item => item.id === servicioCierreActualId);
+      if (!s) {
+        alert('No se encontró el servicio actual.');
+        return;
+      }
+
+      // 1. Candado Boleta de Servicio Obligatoria
+      if (!boletaCierreTemporal || !boletaCierreTemporal.dataUrl) {
+        alert('⛔ CANDADO ACTIVO: No es posible finalizar el servicio sin adjuntar la Boleta de Servicio firmada en formato PDF o Imagen.\n\nPor favor captura o sube el documento para validar el cierre.');
+        return;
+      }
+
+      // 2. Candado Entregables Requeridos
+      if (!entregablesCierreTemporales || entregablesCierreTemporales.length === 0) {
+        alert('⛔ CANDADO ACTIVO: Es obligatorio adjuntar los entregables del trabajo (evidencias fotográficas o reportes en PDF o Imagen) para poder finalizar la orden.');
+        return;
+      }
+
+      // Guardar en el servicio (en memoria / sincronización segura)
+      s.boletaServicio = { ...boletaCierreTemporal };
+      s.entregables = [...entregablesCierreTemporales];
+
+      const inObs = document.getElementById('candadoObservacionesCierre');
+      if (inObs) s.observacionesCierre = inObs.value.trim();
+
+      // Añadir a adjuntos generales para auditoría central
+      if (!s.adjuntosFalla) s.adjuntosFalla = [];
+      s.adjuntosFalla.push({
+        nombre: s.boletaServicio.nombre,
+        tipo: s.boletaServicio.tipo,
+        tamano: s.boletaServicio.tamano,
+        dataUrl: s.boletaServicio.dataUrl
+      });
+      s.entregables.forEach(ent => {
+        s.adjuntosFalla.push({
+          nombre: ent.nombre,
+          tipo: ent.tipo,
+          tamano: ent.tamano,
+          dataUrl: ent.dataUrl
+        });
+      });
+
+      // Cerrar modal candado y limpiar
+      cerrarModalCandadoCierre();
+
+      // Ejecutar cambio de estado a Finalizado con candado validado
+      ejecutarCierreConCandadoValidado(s.id);
+    }
+
+    function ejecutarCierreConCandadoValidado(id) {
+      cambiarEstadoDesdeTecnico('Finalizado', true /* candadoValidado */);
+    }
+
+    function verBoletaServicio(id) {
+      const s = appState.servicios.find(item => item.id === id);
+      if (!s || !s.boletaServicio || !s.boletaServicio.dataUrl) {
+        alert('Este servicio no cuenta con boleta de servicio registrada.');
+        return;
+      }
+
+      const modal = document.getElementById('modalVerEvidencia');
+      const titulo = document.getElementById('modalVerEvidenciaTitulo');
+      const cont = document.getElementById('modalVerEvidenciaContenido');
+      if (!modal || !cont) return;
+
+      const b = s.boletaServicio;
+      titulo.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="file-check-2" class="w-4 h-4 text-amber-400"></i> Boleta de Servicio Firmada · Folio #${s.id}</span>`;
+
+      if (b.esPdf || (b.tipo && b.tipo.includes('pdf')) || (b.dataUrl && b.dataUrl.startsWith('data:application/pdf'))) {
+        cont.innerHTML = `
+          <div class="space-y-3 w-full">
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+              <div class="truncate">
+                <p class="font-bold text-white truncate">${b.nombre || 'Boleta_Servicio.pdf'}</p>
+                <p class="text-[10px] text-slate-400">${b.tamano || 'Documento PDF'} · Firmado por cliente</p>
+              </div>
+              <a href="${b.dataUrl}" download="${b.nombre || `Boleta_${s.id}.pdf`}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar PDF
+              </a>
+            </div>
+            <iframe src="${b.dataUrl}" class="w-full h-[65vh] rounded-xl border border-slate-800 bg-slate-950"></iframe>
+          </div>
+        `;
+      } else {
+        cont.innerHTML = `
+          <div class="space-y-3 w-full flex flex-col items-center">
+            <div class="relative max-h-[65vh] overflow-hidden rounded-xl border border-slate-800 bg-black">
+              <img src="${b.dataUrl}" alt="Boleta de Servicio" class="max-h-[60vh] max-w-full object-contain mx-auto" />
+            </div>
+            <div class="w-full bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+              <div class="truncate">
+                <p class="font-bold text-white truncate">${b.nombre || 'Boleta_Servicio.jpg'}</p>
+                <p class="text-[10px] text-slate-400">${b.tamano || 'Imagen'} · Firmado por cliente</p>
+              </div>
+              <a href="${b.dataUrl}" download="${b.nombre || `Boleta_${s.id}.jpg`}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar Imagen
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function verEntregablesServicio(id) {
+      const s = appState.servicios.find(item => item.id === id);
+      if (!s || !s.entregables || s.entregables.length === 0) {
+        alert('Este servicio no cuenta con entregables registrados.');
+        return;
+      }
+
+      const modal = document.getElementById('modalVerEvidencia');
+      const titulo = document.getElementById('modalVerEvidenciaTitulo');
+      const cont = document.getElementById('modalVerEvidenciaContenido');
+      if (!modal || !cont) return;
+
+      titulo.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="package-check" class="w-4 h-4 text-purple-400"></i> Entregables de Servicio (${s.entregables.length}) · Folio #${s.id}</span>`;
+
+      cont.innerHTML = `
+        <div class="space-y-3 w-full">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[65vh] overflow-y-auto p-1">
+            ${s.entregables.map((ent, idx) => {
+              const isPdf = ent.esPdf || (ent.tipo && ent.tipo.includes('pdf')) || (ent.dataUrl && ent.dataUrl.startsWith('data:application/pdf'));
+              return `
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col justify-between gap-2 shadow">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 ${isPdf ? 'text-rose-400' : 'text-cyan-400'}">
+                      <i data-lucide="${isPdf ? 'file-text' : 'image'}" class="w-5 h-5"></i>
+                    </div>
+                    <div class="truncate text-xs">
+                      <p class="font-bold text-white truncate" title="${ent.nombre}">${ent.nombre}</p>
+                      <p class="text-[10px] text-slate-400">${isPdf ? 'Documento PDF' : 'Fotografía'} · ${ent.tamano || 'Adjunto'}</p>
+                    </div>
+                  </div>
+                  ${!isPdf ? `
+                    <div class="h-28 w-full rounded-lg overflow-hidden bg-black border border-slate-900">
+                      <img src="${ent.dataUrl}" alt="${ent.nombre}" class="w-full h-full object-cover cursor-pointer" onclick="window.open('${ent.dataUrl}', '_blank')" />
+                    </div>
+                  ` : ''}
+                  <div class="flex items-center justify-between pt-1 text-xs">
+                    <a href="${ent.dataUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-medium inline-flex items-center gap-1 text-[11px]">
+                      <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir
+                    </a>
+                    <a href="${ent.dataUrl}" download="${ent.nombre}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 border border-slate-700">
+                      <i data-lucide="download" class="w-3 h-3"></i> Descargar
+                    </a>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+
+      modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function cambiarEstadoDesdeTecnico(nuevoEstado, candadoValidado = false) {
       const select = document.getElementById('tecOrdenSelect');
       let id = select ? select.value : null;
       if (!id && appState.servicioActivoId) id = appState.servicioActivoId;
@@ -7834,6 +8387,12 @@ ${linkTecnico}`;
         calcularMetricasRankingPonderado(s.tecnico.id);
       } 
       else if (nuevoEstado === 'Finalizado') {
+        // Validación obligatoria de Candado de Cierre (Boleta y Entregables)
+        if (!candadoValidado && (!s.boletaServicio || !s.boletaServicio.dataUrl || !s.entregables || s.entregables.length === 0)) {
+          solicitarCierreConCandadoServicio(s.id);
+          return;
+        }
+
         s.timestamps.finalizado = ahora;
 
         // Medir tiempo de solución en sitio
@@ -7894,7 +8453,7 @@ ${linkTecnico}`;
         const tSit = s.tiemposMinutos.solucionEnSitio;
         const alerta4h = s.solucionExcede4h ? '\n⚠️ Advertencia: La solución en sitio demoró más de 4 horas (afecta métrica de solución en ranking).' : '\n✅ Solución en sitio lograda dentro de las 4 horas reglamentarias.';
 
-        alert(`🏁 SERVICIO FINALIZADO CON ÉXITO\n━━━━━━━━━━━━━━━━━━━━━\nFolio: #${s.id}\nTécnico: ${s.tecnico.nombre}\n⏱️ Tiempo en sitio: ${tSit} min\n⌛ Tiempo total de atención: ${tTot} min${alerta4h}\n\n🟢 ¡El técnico ha sido LIBERADO (Turno Libre) y ya puede ser asignado a otro servicio!`);
+        alert(`🏁 SERVICIO FINALIZADO CON ÉXITO\n━━━━━━━━━━━━━━━━━━━━━\nFolio: #${s.id}\nTécnico: ${s.tecnico.nombre}\n⏱️ Tiempo en sitio: ${tSit} min\n⌛ Tiempo total de atención: ${tTot} min${alerta4h}\n🔒 Candado Validado: Boleta de servicio y ${s.entregables ? s.entregables.length : 0} entregables transmitidos a Central.\n🛡️ Modo Seguro: Sin evidencia local en el dispositivo.\n\n🟢 ¡El técnico ha sido LIBERADO (Turno Libre) y ya puede ser asignado a otro servicio!`);
 
         restablecerVistaTecnicoEnEspera();
         poblarSelectorTecnicoOrdenes();
