@@ -1618,7 +1618,7 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2">
-          <button id="btnTecLlegar" onclick="abrirModalCheckinSelfie()" class="py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30">
+          <button id="btnTecLlegar" onclick="manejarBotonLlegadaSitioTecnico(event)" class="py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30">
             <i data-lucide="camera" class="w-4 h-4"></i>
             <span id="txtTecLlegar">Llegué al Sitio</span>
           </button>
@@ -2291,7 +2291,7 @@
       </div>
 
       <!-- Input de Cámara Frontal Nativa (Accesible para click() en iOS Safari y Android) -->
-      <input type="file" id="checkinSelfieFileInput" accept="image/*" capture="user" style="position: absolute; left: -9999px; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
+      <input type="file" id="checkinSelfieFileInput" accept="image/*" capture="user" style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px;" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
 
       <!-- Botones de Acción -->
       <div class="space-y-2 pt-1">
@@ -3795,6 +3795,41 @@
                 Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
+    }
+
+    function manejarBotonLlegadaSitioTecnico(event) {
+      if (event && event.preventDefault) event.preventDefault();
+
+      const select = document.getElementById('tecOrdenSelect');
+      let id = select ? select.value : null;
+      if (!id && appState.servicioActivoId) id = appState.servicioActivoId;
+      if (!id && appState.servicios && appState.servicios.length > 0) id = appState.servicios[0].id;
+
+      const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
+      if (!s) {
+        alert('⚠️ No hay ninguna orden de servicio activa seleccionada.');
+        return;
+      }
+
+      // Si el servicio estaba en estado Pendiente, avanzarlo a Aceptado automáticamente
+      if (s.estatusTecnico === 'Pendiente') {
+        s.estatusTecnico = 'Aceptado';
+        s.timestamps = s.timestamps || {};
+        s.timestamps.aceptado = Date.now();
+        guardarEnAlmacenamientoLocal();
+        actualizarIndicadoresBotonesTecnico(s);
+      }
+
+      // Abrir el modal de check-in con resumen y GPS
+      abrirModalCheckinSelfie(s.id);
+
+      // En teléfonos móviles (Android, iPhone, etc.), disparar DIRECTAMENTE la cámara frontal del celular
+      const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                      ('ontouchstart' in window) || 
+                      (window.innerWidth < 1024);
+      if (esMovil) {
+        dispararCapturaNativaCamara();
+      }
     }
 
     function abrirModalCheckinSelfie(id) {
@@ -9324,9 +9359,9 @@ ${linkTecnico}`;
         btnEnCamino.disabled = true;
         if (txtEnCamino) txtEnCamino.innerText = 'En Camino';
 
-        btnLlegar.className = styleDisabled;
-        btnLlegar.disabled = true;
-        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio';
+        btnLlegar.className = styleEnabledLlegar;
+        btnLlegar.disabled = false;
+        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio (Selfie)';
 
         btnFinalizar.className = styleDisabled;
         btnFinalizar.disabled = true;
@@ -12041,6 +12076,7 @@ ${linkTecnico}`;
     window.verEvidenciaCheckin = verEvidenciaCheckin;
     window.verEntregablesServicio = verEntregablesServicio;
     window.abrirModalCheckinSelfie = abrirModalCheckinSelfie;
+    window.manejarBotonLlegadaSitioTecnico = manejarBotonLlegadaSitioTecnico;
     window.dispararCapturaNativaCamara = dispararCapturaNativaCamara;
 
     function mostrarToast(txt) {
