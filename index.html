@@ -1391,20 +1391,35 @@
             <div class="flex items-center gap-2 flex-wrap">
               <button 
                 onclick="descargarTodasLasSelfies()" 
-                class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/30 transition">
+                class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/30 transition cursor-pointer"
+                title="Descargar todas las fotos de la carpeta a tu equipo">
                 <i data-lucide="download" class="w-4 h-4"></i>
                 <span>Descargar Todas</span>
               </button>
               <button 
+                onclick="sincronizarCarpetaSelfiesDesdeFirebase()" 
+                class="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-xl text-xs font-bold border border-indigo-500/40 flex items-center gap-1.5 transition shadow cursor-pointer"
+                title="Descargar y sincronizar fotos y documentos de campo desde Google Firebase">
+                <i data-lucide="cloud-download" class="w-4 h-4"></i>
+                <span>☁️ Bajar de Firebase</span>
+              </button>
+              <button 
+                onclick="confirmarBorrarTodasLasEvidencias()" 
+                class="px-3 py-1.5 bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs font-bold border border-rose-500/40 flex items-center gap-1.5 transition shadow cursor-pointer"
+                title="Borrar y purgar permanentemente todas las evidencias de la nube">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span>🗑️ Borrar Evidencias de la Nube</span>
+              </button>
+              <button 
                 onclick="actualizarFotosRealesEnCarpeta(true)" 
-                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition shadow"
+                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition shadow cursor-pointer"
                 title="Actualizar y recargar todas las evidencias con fotografías reales en alta definición">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-400"></i>
                 <span>Fotos Reales HD</span>
               </button>
               <button 
                 onclick="renderizarCarpetaSelfiesAdmin(); mostrarToast('🔄 Carpeta de selfies actualizada.');" 
-                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition">
+                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition cursor-pointer">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i>
                 <span>Actualizar</span>
               </button>
@@ -2253,6 +2268,21 @@
           <span>Iniciando cámara frontal...</span>
         </div>
 
+        <!-- Overlay Interactivo si el móvil no permite streaming directo (WhatsApp/Safari/Permisos) -->
+        <div id="checkinCameraFallbackOverlay" class="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-4 text-center space-y-2.5 hidden z-20" onclick="event.stopPropagation()">
+          <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center animate-pulse">
+            <i data-lucide="camera" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h4 class="text-white font-bold text-xs sm:text-sm">Cámara Frontal del Celular</h4>
+            <p class="text-[10px] text-slate-400 mt-0.5 max-w-[240px]">Toca el botón para abrir la cámara de tu celular y capturar la selfie de arribo.</p>
+          </div>
+          <label for="checkinSelfieFileInput" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/40 cursor-pointer">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+            <span>📸 Abrir Cámara Frontal</span>
+          </label>
+        </div>
+
         <!-- Indicador de Cámara Frontal -->
         <div class="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-sm px-2 py-1 rounded-lg border border-slate-800 text-[10px] text-slate-300 flex items-center gap-1.5 z-10">
           <i data-lucide="user" class="w-3 h-3 text-cyan-400"></i>
@@ -2260,8 +2290,8 @@
         </div>
       </div>
 
-      <!-- Input de Respaldo por si el navegador no permite getUserMedia directo -->
-      <input type="file" id="checkinSelfieFileInput" accept="image/*" capture="user" class="hidden" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
+      <!-- Input de Cámara Frontal Nativa (Accesible para click() en iOS Safari y Android) -->
+      <input type="file" id="checkinSelfieFileInput" accept="image/*" capture="user" style="position: absolute; left: -9999px; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
 
       <!-- Botones de Acción -->
       <div class="space-y-2 pt-1">
@@ -3814,7 +3844,9 @@
       const imgPreview = document.getElementById('checkinSelfieImgPreview');
       const boxCaptura = document.getElementById('checkinBotonesCaptura');
       const boxConf = document.getElementById('checkinBotonesConfirmacion');
+      const fallbackOverlay = document.getElementById('checkinCameraFallbackOverlay');
 
+      if (fallbackOverlay) fallbackOverlay.classList.add('hidden');
       if (video) video.classList.remove('hidden');
       if (imgPreview) {
         imgPreview.classList.add('hidden');
@@ -3844,40 +3876,105 @@
     async function iniciarCamaraFrontal() {
       const video = document.getElementById('checkinSelfieVideo');
       const loader = document.getElementById('checkinCameraLoading');
+      const fallbackOverlay = document.getElementById('checkinCameraFallbackOverlay');
+
+      if (fallbackOverlay) fallbackOverlay.classList.add('hidden');
       if (loader) loader.classList.remove('hidden');
 
       detenerCamaraFrontal();
 
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Intentos progresivos para cámara frontal: 1. facingMode: "user", 2. facingMode: { ideal: "user" }, 3. genérico
-        const intentos = [
-          { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-          { video: { facingMode: { ideal: 'user' } }, audio: false },
-          { video: true, audio: false }
-        ];
+      // Atributos esenciales para reproducción en línea en iOS Safari y navegadores móviles
+      if (video) {
+        video.muted = true;
+        video.defaultMuted = true;
+        video.playsInline = true;
+        video.setAttribute('muted', '');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('autoplay', 'true');
+      }
+
+      let camaraIniciada = false;
+
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+        // 1. Detección proactiva de cámara frontal por etiquetas de hardware
+        let idCamaraFrontal = null;
+        try {
+          if (navigator.mediaDevices.enumerateDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevs = devices.filter(d => d.kind === 'videoinput');
+            const frontalDev = videoDevs.find(d => {
+              const label = (d.label || '').toLowerCase();
+              return label.includes('front') || label.includes('delantera') || label.includes('frontal') || label.includes('user') || label.includes('selfie');
+            });
+            if (frontalDev && frontalDev.deviceId) {
+              idCamaraFrontal = frontalDev.deviceId;
+            }
+          }
+        } catch(e) {
+          console.warn('enumerateDevices aviso:', e);
+        }
+
+        // 2. Intentos progresivos: diseñados para no causar OverconstrainedError en pantallas verticales (portrait)
+        const intentos = [];
+
+        if (idCamaraFrontal) {
+          intentos.push({ video: { deviceId: { exact: idCamaraFrontal } }, audio: false });
+        }
+
+        // Constraints flexibles y universales para teléfonos móviles
+        intentos.push({ video: { facingMode: { ideal: 'user' } }, audio: false });
+        intentos.push({ video: { facingMode: 'user' }, audio: false });
+        intentos.push({ video: { facingMode: { ideal: 'user' }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        intentos.push({ video: true, audio: false });
 
         for (const constraints of intentos) {
           try {
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (!stream) continue;
+
             streamCamaraCheckin = stream;
+
             if (video) {
               video.srcObject = stream;
-              video.muted = true;
-              video.setAttribute('muted', '');
-              video.setAttribute('playsinline', 'true');
-              video.setAttribute('autoplay', 'true');
-              await video.play().catch(e => console.warn('video.play aviso:', e));
+              
+              try {
+                await video.play();
+                camaraIniciada = true;
+              } catch(errPlay) {
+                console.warn('video.play directo falló, esperando onloadedmetadata:', errPlay);
+                video.onloadedmetadata = async () => {
+                  try {
+                    await video.play();
+                    camaraIniciada = true;
+                    if (loader) loader.classList.add('hidden');
+                    if (fallbackOverlay) fallbackOverlay.classList.add('hidden');
+                  } catch(e) {}
+                };
+              }
             }
+
             if (loader) loader.classList.add('hidden');
+            if (fallbackOverlay) fallbackOverlay.classList.add('hidden');
+            camaraIniciada = true;
             return;
           } catch (errIntento) {
-            console.warn('Intento de cámara falló:', errIntento.name);
+            console.warn('Intento de cámara falló:', constraints, errIntento.name);
+            await new Promise(r => setTimeout(r, 120));
           }
         }
       }
 
+      // Si el navegador móvil no permite WebRTC en vivo (ej. WhatsApp in-app browser, permisos o HTTP)
       if (loader) loader.classList.add('hidden');
-      mostrarToast('📷 Si no ves tu cámara en vivo, pulsa "Cámara Celular (Frontal)" para capturarla directamente.');
+      if (!camaraIniciada) {
+        console.info('Activando interfaz directa para cámara frontal del dispositivo');
+        if (fallbackOverlay) {
+          fallbackOverlay.classList.remove('hidden');
+          if (window.lucide) lucide.createIcons();
+        }
+        mostrarToast('📷 Toca "Abrir Cámara Frontal" para tomar tu selfie de arribo.');
+      }
     }
 
     function detenerCamaraFrontal() {
@@ -4303,14 +4400,25 @@
       mostrarToast('📸 Selfie frontal sellada y georreferenciada con éxito.');
     }
 
+    function dispararCapturaNativaCamara() {
+      const inSelfie = document.getElementById('checkinSelfieFileInput');
+      if (inSelfie) {
+        inSelfie.value = '';
+        try {
+          inSelfie.click();
+        } catch(e) {
+          console.warn('Error al disparar click en input de cámara:', e);
+        }
+      }
+    }
+
     async function capturarSelfieConMarcaDeAgua() {
       const video = document.getElementById('checkinSelfieVideo');
       const canvas = document.getElementById('checkinSelfieCanvas');
 
-      // Si la cámara en vivo no está emitiendo cuadros, invocar input nativo de cámara frontal
+      // Si la cámara en vivo no está emitiendo cuadros, invocar disparador nativo de cámara frontal
       if (!video || !video.videoWidth || video.videoWidth === 0 || (!video.srcObject && !streamCamaraCheckin)) {
-        const inSelfie = document.getElementById('checkinSelfieFileInput');
-        if (inSelfie) inSelfie.click();
+        dispararCapturaNativaCamara();
         return;
       }
 
@@ -4774,10 +4882,10 @@
                 `}
                 <button 
                   onclick="confirmarBorrarEvidenciasNube('${s.id}')" 
-                  class="py-1 bg-rose-950/40 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-[10px] font-bold border border-rose-800/40 flex items-center justify-center gap-1 transition cursor-pointer"
-                  title="Borrar Evidencias de la Nube (Libera espacio de almacenamiento)">
-                  <i data-lucide="cloud-off" class="w-3 h-3"></i>
-                  <span>Borrar Nube</span>
+                  class="py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-[10px] font-bold border border-rose-500/30 flex items-center justify-center gap-1 transition cursor-pointer"
+                  title="Borrar evidencias de este servicio de la nube">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  <span>Borrar Evidencias</span>
                 </button>
               </div>
             </div>
@@ -5156,12 +5264,44 @@
     async function recuperarExpedienteDeFirebase(servicioId) {
       if (!servicioId) return null;
       try {
-        const s = appState.servicios ? appState.servicios.find(item => item.id === servicioId) : null;
-        if (!s) return null;
+        let s = appState.servicios ? appState.servicios.find(item => item.id === servicioId) : null;
+        let esNuevo = false;
 
-        let huboCambios = false;
+        // Si la orden aún no existe en appState.servicios en esta máquina, incorporarla automáticamente
+        if (!s) {
+          s = {
+            id: servicioId,
+            fecha: new Date().toISOString(),
+            cliente: { nombre: 'Cliente en Campo', direccion: 'Sitio de Atención', ciudad: 'CDMX', estado: '', cp: '' },
+            tecnico: { nombre: 'Técnico Asignado', ranking: '5.0', telefono: '5512345678' },
+            sla: { nivel: '4h', estatus: 'Cumplido' },
+            ruta: { distanciaKm: 15.0, duracionMinutos: 35, costoEstimado: 120, coordenadas: [] },
+            estatusTecnico: 'Finalizado',
+            evidenciaLlegada: null,
+            boletaServicio: null,
+            entregables: []
+          };
+          appState.servicios.unshift(s);
+          esNuevo = true;
+        }
 
-        // 1. Recuperar Selfie
+        let huboCambios = esNuevo;
+
+        // 1. Recuperar Master si existe
+        try {
+          const urlMaster = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes/${encodeURIComponent(servicioId)}?key=${FIREBASE_CONFIG.apiKey}`;
+          const rM = await fetch(urlMaster);
+          if (rM.ok) {
+            const dM = await rM.json();
+            const fM = dM.fields || {};
+            if (fM.clienteNombre && fM.clienteNombre.stringValue) s.cliente.nombre = fM.clienteNombre.stringValue;
+            if (fM.tecnicoNombre && fM.tecnicoNombre.stringValue) s.tecnico.nombre = fM.tecnicoNombre.stringValue;
+            if (fM.estatusTecnico && fM.estatusTecnico.stringValue) s.estatusTecnico = fM.estatusTecnico.stringValue;
+            huboCambios = true;
+          }
+        } catch(e) {}
+
+        // 2. Recuperar Selfie
         try {
           const urlSelfie = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes/${encodeURIComponent(servicioId)}_selfie?key=${FIREBASE_CONFIG.apiKey}`;
           const rS = await fetch(urlSelfie);
@@ -5171,12 +5311,12 @@
             if (fS.dataUrl && fS.dataUrl.stringValue) {
               if (!s.evidenciaLlegada) s.evidenciaLlegada = {};
               s.evidenciaLlegada.dataUrl = fS.dataUrl.stringValue;
-              s.evidenciaLlegada.fecha = fS.fecha ? fS.fecha.stringValue : (s.evidenciaLlegada.fecha || '');
-              s.evidenciaLlegada.distanciaStr = fS.distanciaStr ? fS.distanciaStr.stringValue : '';
+              s.evidenciaLlegada.fecha = fS.fecha ? fS.fecha.stringValue : (s.evidenciaLlegada.fecha || new Date().toLocaleString('es-MX'));
+              s.evidenciaLlegada.distanciaStr = fS.distanciaStr ? fS.distanciaStr.stringValue : 'En Sitio';
               s.evidenciaLlegada.direccionTelefonoReal = fS.direccionTelefonoReal ? fS.direccionTelefonoReal.stringValue : '';
               s.evidenciaLlegada.gps = {
-                lat: fS.gpsLat ? (fS.gpsLat.doubleValue || parseFloat(fS.gpsLat.stringValue || 0)) : (s.evidenciaLlegada.gps?.lat || 0),
-                lng: fS.gpsLng ? (fS.gpsLng.doubleValue || parseFloat(fS.gpsLng.stringValue || 0)) : (s.evidenciaLlegada.gps?.lng || 0),
+                lat: fS.gpsLat ? (fS.gpsLat.doubleValue || parseFloat(fS.gpsLat.stringValue || 0)) : (s.evidenciaLlegada.gps?.lat || 19.4326),
+                lng: fS.gpsLng ? (fS.gpsLng.doubleValue || parseFloat(fS.gpsLng.stringValue || 0)) : (s.evidenciaLlegada.gps?.lng || -99.1332),
                 enSitio: fS.enSitio ? (fS.enSitio.booleanValue !== false) : true
               };
               huboCambios = true;
@@ -5184,7 +5324,7 @@
           }
         } catch(e) {}
 
-        // 2. Recuperar Boleta
+        // 3. Recuperar Boleta
         try {
           const urlBoleta = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes/${encodeURIComponent(servicioId)}_boleta?key=${FIREBASE_CONFIG.apiKey}`;
           const rB = await fetch(urlBoleta);
@@ -5203,7 +5343,7 @@
           }
         } catch(e) {}
 
-        // 3. Recuperar Entregables
+        // 4. Recuperar Entregables
         try {
           const urlEnt = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes/${encodeURIComponent(servicioId)}_entregables?key=${FIREBASE_CONFIG.apiKey}`;
           const rE = await fetch(urlEnt);
@@ -5311,29 +5451,42 @@
     }
 
     /**
-     * Sincronización masiva de expedientes desde Google Firebase al iniciar
+     * Sincronización completa de expedientes desde Google Firebase Firestore
+     * Detecta todos los folios con selfies y documentos tomados en campo por los técnicos
      */
-    async function sincronizarTodosLosExpedientesFirebase() {
+    async function sincronizarTodosLosExpedientesFirebase(mostrarToastFeedback = false) {
       try {
+        if (mostrarToastFeedback) mostrarToast('☁️ Conectando y descargando evidencias desde Google Firebase...');
         const url = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes?key=${FIREBASE_CONFIG.apiKey}`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           if (data && data.documents && Array.isArray(data.documents)) {
-            for (const doc of data.documents) {
-              const nameParts = doc.name.split('/');
-              const docId = nameParts[nameParts.length - 1];
-              // Si es un documento master (no _selfie, _boleta o _entregables)
-              if (!docId.includes('_')) {
-                await recuperarExpedienteDeFirebase(docId);
-              }
+            const foliosNube = new Set();
+            data.documents.forEach(doc => {
+              const parts = doc.name.split('/');
+              const docId = parts[parts.length - 1];
+              const baseFolio = docId.split('_')[0];
+              if (baseFolio) foliosNube.add(baseFolio);
+            });
+
+            for (const folio of foliosNube) {
+              await recuperarExpedienteDeFirebase(folio);
+            }
+
+            renderizarCarpetaSelfiesAdmin();
+            renderizarTabla();
+            if (mostrarToastFeedback) {
+              mostrarToast(`✅ ${foliosNube.size} expedientes sincronizados desde Google Firebase.`);
             }
           }
         }
       } catch(e) {
-        console.warn('Modo local para expedientes en Firebase:', e);
+        console.warn('Aviso sincronizando expedientes en Firebase:', e);
       }
     }
+
+    const sincronizarCarpetaSelfiesDesdeFirebase = () => sincronizarTodosLosExpedientesFirebase(true);
 
     function guardarEnAlmacenamientoLocal() {
       try {
@@ -5615,6 +5768,11 @@
             actualizarVistaTecnicoActual();
           }
           mostrarToast(`🔔 Actualización en Vivo: Folio #${data.id} cambió a "${data.status}"`);
+          if (data.status === 'Llegó' || data.status === 'Finalizado') {
+            if (typeof recuperarExpedienteDeFirebase === 'function') {
+              recuperarExpedienteDeFirebase(data.id);
+            }
+          }
         }
       } else if (type === 'NEW_SERVICE') {
         const existe = appState.servicios.find(s => s.id === data.service.id);
@@ -8177,10 +8335,12 @@ ${linkTecnico}`;
 
         // 4. Icono Funcional para Borrar Evidencias de la Nube
         const btnBorrarNube = tieneEvidenciasNube
-          ? `<button onclick="confirmarBorrarEvidenciasNube('${s.id}')" title="☁️ Borrar Evidencias de la Nube (Selfie, Boleta y Entregables)" class="p-1 rounded bg-rose-950/40 hover:bg-rose-600 text-rose-400 hover:text-white transition" style="cursor:pointer;">
-               <i data-lucide="cloud-off" class="w-3.5 h-3.5"></i>
+          ? `<button onclick="confirmarBorrarEvidenciasNube('${s.id}')" title="🗑️ Borrar Evidencias de la Nube (Selfie, Boleta y Entregables)" class="p-1 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white transition" style="cursor:pointer;">
+               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
              </button>`
-          : '';
+          : `<button onclick="mostrarToast('ℹ️ Folio #${s.id}: No tiene evidencias en la nube para borrar.')" title="Sin evidencias en la nube" class="p-1 rounded bg-slate-800/40 text-slate-500 hover:text-slate-300 transition opacity-40" style="cursor:pointer;">
+               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+             </button>`;
 
         const btnVerEntregables = tieneEntregables
           ? `<button onclick="verEntregablesServicio('${s.id}')" title="Ver Entregables de Servicio (${s.entregables.length})" class="p-1 rounded bg-purple-600/20 hover:bg-purple-600 text-purple-400 hover:text-white transition" style="cursor:pointer;">
@@ -9183,9 +9343,9 @@ ${linkTecnico}`;
         btnEnCamino.disabled = false;
         if (txtEnCamino) txtEnCamino.innerText = 'Iniciar Traslado (En Camino)';
 
-        btnLlegar.className = styleDisabled;
-        btnLlegar.disabled = true;
-        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio';
+        btnLlegar.className = styleEnabledLlegar;
+        btnLlegar.disabled = false;
+        if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio (Selfie)';
 
         btnFinalizar.className = styleDisabled;
         btnFinalizar.disabled = true;
@@ -9846,31 +10006,21 @@ ${linkTecnico}`;
       }
     }
 
-    function confirmarBorrarEvidenciasNube(id) {
+    async function confirmarBorrarEvidenciasNube(id) {
       if (!id) id = servicioRepositorioActualId || appState.servicioActivoId;
       const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
       if (!s) {
-        mostrarToast('⚠️ No se encontró la orden para purgar.');
+        mostrarToast('⚠️ No se encontró la orden solicitada.');
         return;
       }
 
-      const tieneEv = !!(
-        (s.evidenciaLlegada && s.evidenciaLlegada.dataUrl) ||
-        (s.boletaServicio && s.boletaServicio.dataUrl) ||
-        (s.entregables && s.entregables.length > 0)
-      );
-
-      if (!tieneEv) {
-        mostrarToast('ℹ️ Esta orden ya no cuenta con evidencias almacenadas en la nube.');
-        return;
-      }
-
-      const conf = confirm(`☁️ BORRAR EVIDENCIAS EN LA NUBE\n\n¿Deseas eliminar permanentemente los archivos en la nube (Selfie, Boleta Firmada y Entregables) del servicio #${s.id}?\n\n- El historial y métricas del servicio permanecerán intactos.\n- Se liberará el almacenamiento en la nube.\n- Esta acción no se puede deshacer.`);
+      const conf = confirm(`🗑️ BORRAR EVIDENCIAS EN LA NUBE\n\n¿Deseas eliminar permanentemente de Google Firebase los archivos (Selfie, Boleta firmada y Entregables) de la orden #${s.id}?\n\n- El historial y datos del servicio permanecerán intactos.\n- Se liberará el almacenamiento en la nube.\n- Esta acción no se puede deshacer.`);
       if (!conf) return;
 
-      // Purgar de Google Firebase Firestore (sm-crm-e9ba4)
+      mostrarToast(`⏳ Eliminando evidencias de #${s.id} en Google Firebase...`);
+
       if (typeof borrarExpedienteDeFirebase === 'function') {
-        borrarExpedienteDeFirebase(s.id);
+        await borrarExpedienteDeFirebase(s.id);
       }
 
       s.evidenciaLlegada = null;
@@ -9891,7 +10041,51 @@ ${linkTecnico}`;
       }
 
       registrarAuditoria('PURGA_EVIDENCIAS_NUBE', `Evidencias en nube eliminadas para la orden #${s.id}.`);
-      mostrarToast(`☁️ Evidencias eliminadas exitosamente de la nube para el folio #${s.id}.`);
+      mostrarToast(`✅ Evidencias de la orden #${s.id} eliminadas de Google Firebase.`);
+    }
+
+    /**
+     * Purga masiva de todas las evidencias almacenadas en la nube
+     */
+    async function confirmarBorrarTodasLasEvidencias() {
+      const conf = confirm(`🗑️ PURGAR TODAS LAS EVIDENCIAS EN LA NUBE\n\n¿Estás seguro de que deseas eliminar TODAS las fotografías selfies, boletas y entregables almacenados en Google Firebase?\n\n- Se vaciará la carpeta de evidencias y se liberará espacio en Firebase.\n- Los datos de los servicios en la tabla permanecerán intactos.\n- Esta acción no se puede deshacer.`);
+      if (!conf) return;
+
+      mostrarToast('⏳ Purgando todas las evidencias en Google Firebase...');
+
+      try {
+        const url = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes?key=${FIREBASE_CONFIG.apiKey}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.documents && Array.isArray(data.documents)) {
+            for (const doc of data.documents) {
+              const parts = doc.name.split('/');
+              const docId = parts[parts.length - 1];
+              await fetch(`${FIREBASE_CONFIG.baseUrl}/betgui_expedientes/${encodeURIComponent(docId)}?key=${FIREBASE_CONFIG.apiKey}`, { method: 'DELETE' }).catch(() => {});
+            }
+          }
+        }
+
+        if (appState.servicios) {
+          appState.servicios.forEach(s => {
+            s.evidenciaLlegada = null;
+            s.boletaServicio = null;
+            s.entregables = [];
+            if (s.adjuntosFalla) {
+              s.adjuntosFalla = s.adjuntosFalla.filter(a => !a.nombre || (!a.nombre.includes('Selfie') && !a.nombre.includes('Boleta') && !a.nombre.includes('Evidencia')));
+            }
+          });
+        }
+
+        guardarEnAlmacenamientoLocal();
+        renderizarCarpetaSelfiesAdmin();
+        renderizarTabla();
+        mostrarToast('✅ Todas las evidencias fueron eliminadas exitosamente de Google Firebase.');
+      } catch(err) {
+        console.error('Error al purgar todas las evidencias:', err);
+        mostrarToast('⚠️ Ocurrió un error al purgar evidencias en Firebase.');
+      }
     }
 
     function verBoletaServicio(id) {
@@ -10493,6 +10687,9 @@ ${linkTecnico}`;
         }
         actualizarFotosRealesEnCarpeta(false);
         renderizarCarpetaSelfiesAdmin();
+        if (typeof sincronizarTodosLosExpedientesFirebase === 'function') {
+          sincronizarTodosLosExpedientesFirebase();
+        }
       }
 
       setTimeout(() => {
@@ -11837,9 +12034,14 @@ ${linkTecnico}`;
     window.descargarArchivoDataUrl = descargarArchivoDataUrl;
     window.descargarTodoExpediente = descargarTodoExpediente;
     window.confirmarBorrarEvidenciasNube = confirmarBorrarEvidenciasNube;
+    window.confirmarBorrarTodasLasEvidencias = confirmarBorrarTodasLasEvidencias;
+    window.sincronizarCarpetaSelfiesDesdeFirebase = sincronizarCarpetaSelfiesDesdeFirebase;
+    window.sincronizarTodosLosExpedientesFirebase = sincronizarTodosLosExpedientesFirebase;
     window.verBoletaServicio = verBoletaServicio;
     window.verEvidenciaCheckin = verEvidenciaCheckin;
     window.verEntregablesServicio = verEntregablesServicio;
+    window.abrirModalCheckinSelfie = abrirModalCheckinSelfie;
+    window.dispararCapturaNativaCamara = dispararCapturaNativaCamara;
 
     function mostrarToast(txt) {
       const toast = document.createElement('div');
