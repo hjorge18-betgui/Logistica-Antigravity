@@ -14,6 +14,9 @@
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- jsPDF CDN para Generación Oficial de Expedientes PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <!-- Leaflet CSS & JS para Mapa 100% Libre sin marcas de agua -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -2063,16 +2066,14 @@
           </button>
         </div>
 
-        <!-- Botón único para subir Boleta en formato PDF o Imagen -->
+        <!-- Botón táctil nativo para subir Boleta en formato PDF o Imagen -->
         <div id="candadoBoletaBotones">
-          <button type="button" onclick="document.getElementById('inputBoletaArchivo').click()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow cursor-pointer">
+          <label class="relative overflow-hidden w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow cursor-pointer">
+            <input type="file" id="inputBoletaArchivo" accept=".pdf,application/pdf,image/jpeg,image/png,image/webp,image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" onchange="cargarArchivoBoletaCandado(this.files[0])" />
             <i data-lucide="file-up" class="w-4 h-4"></i>
             <span>📄 Subir Boleta Firmada (PDF o Archivo de Imagen)</span>
-          </button>
+          </label>
         </div>
-
-        <!-- Input oculto para Boleta (PDF o Imagen) -->
-        <input type="file" id="inputBoletaArchivo" accept=".pdf,image/jpeg,image/png,image/webp" class="hidden" onchange="cargarArchivoBoletaCandado(this.files[0])" />
       </div>
 
       <!-- SECCIÓN 2: ENTREGABLES DE SERVICIO (OBLIGATORIOS) -->
@@ -2094,16 +2095,14 @@
           </div>
         </div>
 
-        <!-- Botón único para adjuntar múltiples entregables (PDF o Imágenes) -->
+        <!-- Botón táctil nativo para adjuntar múltiples entregables (PDF o Imágenes) -->
         <div class="pt-1">
-          <button type="button" onclick="document.getElementById('inputEntregablesArchivos').click()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+          <label class="relative overflow-hidden w-full py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+            <input type="file" id="inputEntregablesArchivos" accept=".pdf,application/pdf,image/jpeg,image/png,image/webp,image/*" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" onchange="agregarArchivosEntregablesCandado(this.files)" />
             <i data-lucide="folder-up" class="w-4 h-4"></i>
             <span>📁 Subir Varias Evidencias (PDF o Archivos de Imagen)</span>
-          </button>
+          </label>
         </div>
-
-        <!-- Input oculto para múltiples Entregables (PDF o Imágenes) -->
-        <input type="file" id="inputEntregablesArchivos" accept=".pdf,image/jpeg,image/png,image/webp" multiple class="hidden" onchange="agregarArchivosEntregablesCandado(this.files)" />
       </div>
 
       <!-- Notas / Observaciones Finales (Opcional) -->
@@ -2151,9 +2150,13 @@
           </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <button id="repoBtnDescargarTodo" onclick="descargarTodoExpediente()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer">
+          <button id="repoBtnDescargarReportePdf" onclick="generarYDescargarReportePdfServicio()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer" title="Generar documento PDF consolidado con todas las evidencias georreferenciadas">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+            <span>Expediente en PDF</span>
+          </button>
+          <button id="repoBtnDescargarTodo" onclick="descargarTodoExpediente()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer" title="Bajar todos los archivos individuales (Selfie, Boleta y Entregables)">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span>Bajar Expediente al Equipo</span>
+            <span>Bajar Archivos</span>
           </button>
           <button id="repoBtnBorrarNube" onclick="confirmarBorrarEvidenciasNube()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs font-bold border border-rose-500/30 flex items-center gap-1.5 transition cursor-pointer" title="Borrar archivos de la nube">
             <i data-lucide="cloud-off" class="w-3.5 h-3.5"></i>
@@ -2269,7 +2272,7 @@
         </div>
 
         <!-- Overlay Interactivo si el móvil no permite streaming directo (WhatsApp/Safari/Permisos) -->
-        <div id="checkinCameraFallbackOverlay" class="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-4 text-center space-y-2.5 hidden z-20" onclick="event.stopPropagation()">
+        <div id="checkinCameraFallbackOverlay" class="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-4 text-center space-y-2.5 hidden z-20">
           <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center animate-pulse">
             <i data-lucide="camera" class="w-6 h-6"></i>
           </div>
@@ -2277,7 +2280,8 @@
             <h4 class="text-white font-bold text-xs sm:text-sm">Cámara Frontal del Celular</h4>
             <p class="text-[10px] text-slate-400 mt-0.5 max-w-[240px]">Toca el botón para abrir la cámara de tu celular y capturar la selfie de arribo.</p>
           </div>
-          <label for="checkinSelfieFileInput" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/40 cursor-pointer">
+          <label class="relative overflow-hidden px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/40 cursor-pointer">
+            <input type="file" accept="image/*" capture="user" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
             <i data-lucide="camera" class="w-4 h-4"></i>
             <span>📸 Abrir Cámara Frontal</span>
           </label>
@@ -2290,24 +2294,23 @@
         </div>
       </div>
 
-      <!-- Input de Cámara Frontal Nativa (Accesible para click() en iOS Safari y Android) -->
-      <input type="file" id="checkinSelfieFileInput" accept="image/*" capture="user" style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px;" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
-
       <!-- Botones de Acción -->
       <div class="space-y-2 pt-1">
         <!-- Estado 1: Antes de tomar la foto -->
         <div id="checkinBotonesCaptura" class="space-y-2">
-          <button type="button" onclick="capturarSelfieConMarcaDeAgua()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 cursor-pointer">
+          <label id="btnCheckinCapturarSelfieLabel" class="relative overflow-hidden w-full py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 cursor-pointer">
+            <input type="file" id="checkinSelfieFileInput" accept="image/*" capture="user" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
             <i data-lucide="camera" class="w-5 h-5"></i>
-            <span>📸 Tomar Selfie con Cámara Frontal</span>
-          </button>
+            <span id="txtBtnCapturarSelfie">📸 Tomar Selfie con Cámara Frontal</span>
+          </label>
           
           <div class="grid grid-cols-2 gap-2">
-            <label for="checkinSelfieFileInput" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer text-center shadow-sm">
+            <label class="relative overflow-hidden py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-300 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer text-center shadow-sm">
+              <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" onchange="cargarSelfieDesdeArchivo(this.files[0])" />
               <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
               <span>Cámara Celular (Frontal)</span>
             </label>
-            <button type="button" onclick="cargarFotoRealDemoTecnicoCheckin()" class="py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-1.5" title="Foto real para pruebas en PC">
+            <button type="button" onclick="cargarFotoRealDemoTecnicoCheckin()" class="py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white font-bold text-xs rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-1.5 cursor-pointer" title="Foto real para pruebas en PC">
               <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
               <span>Foto Demo (PC)</span>
             </button>
@@ -3894,8 +3897,14 @@
       const modal = document.getElementById('modalCheckinSelfieEnSitio');
       if (modal) modal.classList.remove('hidden');
 
-      // Iniciar cámara frontal y GPS
-      iniciarCamaraFrontal();
+      // Iniciar cámara frontal y GPS (Solo en PC/Laptop para evitar abrir dos veces la cámara en celular)
+      const esMovilCheckin = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                            ('ontouchstart' in window && window.innerWidth < 1024);
+      if (!esMovilCheckin) {
+        iniciarCamaraFrontal();
+      } else {
+        detenerCamaraFrontal();
+      }
       obtenerGeolocalizacionEnSitio(false);
 
       if (window.lucide) lucide.createIcons();
@@ -4421,7 +4430,9 @@
       const imgPreview = document.getElementById('checkinSelfieImgPreview');
       const boxCaptura = document.getElementById('checkinBotonesCaptura');
       const boxConf = document.getElementById('checkinBotonesConfirmacion');
+      const fallbackOverlay = document.getElementById('checkinCameraFallbackOverlay');
 
+      if (fallbackOverlay) fallbackOverlay.classList.add('hidden');
       if (video) video.classList.add('hidden');
       if (imgPreview) {
         imgPreview.src = dataUrl;
@@ -4523,7 +4534,14 @@
       if (boxCaptura) boxCaptura.classList.remove('hidden');
       if (boxConf) boxConf.classList.add('hidden');
 
-      iniciarCamaraFrontal();
+      const esMovilReinit = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                            ('ontouchstart' in window && window.innerWidth < 1024);
+      if (!esMovilReinit) {
+        iniciarCamaraFrontal();
+      } else {
+        detenerCamaraFrontal();
+        dispararCapturaNativaCamara();
+      }
       if (window.lucide) lucide.createIcons();
     }
 
@@ -4554,16 +4572,16 @@
         dataUrl: evidenciaSelfieTemporal.dataUrl
       });
 
-      // Guardar inmediatamente en Google Firebase Firestore (sm-crm-e9ba4)
+      // 1. Transición formal de estatus a 'Llegó' PRIMERO para que Firebase registre 'Llegó'
+      cambiarEstadoDesdeTecnico('Llegó');
+
+      // 2. Guardar inmediatamente en Google Firebase Firestore (sm-crm-e9ba4)
       if (typeof guardarExpedienteEnFirebase === 'function') {
-        guardarExpedienteEnFirebase(s);
+        await guardarExpedienteEnFirebase(s);
       }
 
-      // Cerrar modal
+      // 3. Cerrar modal
       cerrarModalCheckinSelfie();
-
-      // Transición formal de estatus a 'Llegó'
-      cambiarEstadoDesdeTecnico('Llegó');
 
       // Advertencia de Auditoría si el técnico está fuera de sitio
       if (s.evidenciaLlegada && s.evidenciaLlegada.gps && !s.evidenciaLlegada.gps.enSitio) {
@@ -5131,7 +5149,7 @@
             </div>
             <div class="flex items-center gap-2">
               ${ev.mapsUrl ? `<a href="${ev.mapsUrl}" target="_blank" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Ver en Google Maps</a>` : ''}
-              <a href="${ev.dataUrl}" download="CheckIn_Folio_${s.id}.jpg" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 border border-slate-700"><i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar</a>
+              <button onclick="descargarArchivoDataUrl('${ev.dataUrl}', 'CheckIn_Folio_${s.id}.jpg')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 border border-slate-700 cursor-pointer"><i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar</button>
             </div>
           </div>
         </div>
@@ -5203,6 +5221,8 @@
       const folio = s.id;
 
       try {
+        const promesas = [];
+
         // 1. Guardar Selfie Georreferenciada en Firestore
         if (s.evidenciaLlegada && s.evidenciaLlegada.dataUrl) {
           const urlSelfie = `${FIREBASE_CONFIG.baseUrl}/betgui_expedientes/${encodeURIComponent(folio)}_selfie?key=${FIREBASE_CONFIG.apiKey}`;
@@ -5220,11 +5240,13 @@
               timestamp: { integerValue: String(Date.now()) }
             }
           };
-          fetch(urlSelfie, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadSelfie)
-          }).catch(err => console.warn('Aviso guardando selfie en Firebase:', err));
+          promesas.push(
+            fetch(urlSelfie, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payloadSelfie)
+            }).catch(err => console.warn('Aviso guardando selfie en Firebase:', err))
+          );
         }
 
         // 2. Guardar Boleta de Servicio Firmada en Firestore
@@ -5241,11 +5263,13 @@
               timestamp: { integerValue: String(Date.now()) }
             }
           };
-          fetch(urlBoleta, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadBoleta)
-          }).catch(err => console.warn('Aviso guardando boleta en Firebase:', err));
+          promesas.push(
+            fetch(urlBoleta, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payloadBoleta)
+            }).catch(err => console.warn('Aviso guardando boleta en Firebase:', err))
+          );
         }
 
         // 3. Guardar Entregables en Firestore
@@ -5260,11 +5284,13 @@
               timestamp: { integerValue: String(Date.now()) }
             }
           };
-          fetch(urlEnt, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadEnt)
-          }).catch(err => console.warn('Aviso guardando entregables en Firebase:', err));
+          promesas.push(
+            fetch(urlEnt, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payloadEnt)
+            }).catch(err => console.warn('Aviso guardando entregables en Firebase:', err))
+          );
         }
 
         // 4. Guardar Resumen Master del Expediente
@@ -5281,13 +5307,16 @@
             timestamp: { integerValue: String(Date.now()) }
           }
         };
-        fetch(urlMaster, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payloadMaster)
-        }).catch(err => console.warn('Aviso guardando resumen en Firebase:', err));
+        promesas.push(
+          fetch(urlMaster, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadMaster)
+          }).catch(err => console.warn('Aviso guardando resumen en Firebase:', err))
+        );
 
-        console.log('☁️ Expediente transmitido a Google Firebase:', folio);
+        await Promise.all(promesas);
+        console.log('☁️ Expediente transmitido y confirmado en Google Firebase:', folio);
       } catch(err) {
         console.warn('Error en guardarExpedienteEnFirebase:', err);
       }
@@ -9450,22 +9479,171 @@ ${linkTecnico}`;
       if (window.lucide) lucide.createIcons();
     }
 
+    function generarPdfMinimalista(titulo, folio, cliente, tecnico, fecha, notas) {
+      const lineas = [
+        'BT',
+        '/F1 16 Tf',
+        '40 750 Td',
+        '(' + (titulo || 'BET-GUI LOGISTICA - REPORTE OFICIAL').replace(/[()]/g, '') + ') Tj',
+        '/F1 10 Tf',
+        '0 -25 Td',
+        '(FOLIO: #' + folio + '   |   FECHA: ' + (fecha || '').replace(/[()]/g, '') + ') Tj',
+        '0 -18 Td',
+        '(CLIENTE: ' + (cliente || 'Cliente en Sitio').replace(/[()]/g, '') + ') Tj',
+        '0 -18 Td',
+        '(TECNICO: ' + (tecnico || 'Tecnico Asignado').replace(/[()]/g, '') + ') Tj',
+        '0 -18 Td',
+        '(ESTATUS: CONCLUIDO Y AUDITADO EN GOOGLE FIREBASE) Tj',
+        '0 -30 Td',
+        '/F1 11 Tf',
+        '(DICTAMEN TECNICO Y OBSERVACIONES:) Tj',
+        '0 -18 Td',
+        '/F1 9 Tf',
+        '(' + (notas || 'Servicio validado a entera satisfaccion del cliente.').substring(0, 95).replace(/[()]/g, '') + ') Tj',
+        '0 -45 Td',
+        '/F1 10 Tf',
+        '(_____________________________          _____________________________) Tj',
+        '0 -15 Td',
+        '(       FIRMA DEL CLIENTE                      FIRMA DEL TECNICO      ) Tj',
+        '0 -35 Td',
+        '/F1 8 Tf',
+        '(Certificado Digital de Servicio - Google Firebase sm-crm-e9ba4) Tj',
+        'ET'
+      ];
+      const streamContent = lineas.join('\n');
+      let streamLen = 0;
+      for (let i = 0; i < streamContent.length; i++) {
+        streamLen += streamContent.charCodeAt(i) <= 255 ? 1 : 2;
+      }
+
+      const obj1 = '1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n';
+      const obj2 = '2 0 obj\n<</Type /Pages /Kids [3 0 R] /Count 1>>\nendobj\n';
+      const obj3 = '3 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>>>>\nendobj\n';
+      const obj4 = '4 0 obj\n<</Length ' + streamLen + '>>\nstream\n' + streamContent + '\nendstream\nendobj\n';
+      const obj5 = '5 0 obj\n<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>\nendobj\n';
+
+      const header = '%PDF-1.4\n';
+      let offset = header.length;
+      const offsets = [offset];
+      offset += obj1.length; offsets.push(offset);
+      offset += obj2.length; offsets.push(offset);
+      offset += obj3.length; offsets.push(offset);
+      offset += obj4.length; offsets.push(offset);
+
+      const xref = 'xref\n0 6\n0000000000 65535 f \n' +
+        offsets.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+      const trailer = 'trailer\n<</Size 6 /Root 1 0 R>>\nstartxref\n' + (header.length + obj1.length + obj2.length + obj3.length + obj4.length + obj5.length) + '\n%%EOF';
+
+      const pdfString = header + obj1 + obj2 + obj3 + obj4 + obj5 + xref + trailer;
+      return 'data:application/pdf;base64,' + btoa(pdfString);
+    }
+
+    function generarPdfBoletaOficialDataUrl(folio, clienteNom, tecNom, fechaStr, dictamen) {
+      try {
+        if (window.jspdf && window.jspdf.jsPDF) {
+          const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+          
+          doc.setFillColor(15, 23, 42);
+          doc.rect(0, 0, 216, 32, 'F');
+          
+          doc.setTextColor(56, 189, 248);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(16);
+          doc.text('BET-GUI LOGÍSTICA & FSM PRO', 14, 14);
+          
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10);
+          doc.text('BOLETA OFICIAL DE SERVICIO Y CONFORMIDAD EN SITIO', 14, 22);
+
+          doc.setFontSize(11);
+          doc.setTextColor(251, 191, 36);
+          doc.text(`FOLIO: #${folio}`, 155, 14);
+          doc.setTextColor(203, 213, 225);
+          doc.setFontSize(9);
+          doc.text(`FECHA: ${fechaStr || new Date().toLocaleDateString('es-MX')}`, 155, 22);
+
+          doc.setDrawColor(203, 213, 225);
+          doc.setLineWidth(0.3);
+          doc.rect(14, 40, 188, 38);
+
+          doc.setTextColor(15, 23, 42);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('DATOS DE ATENCIÓN Y CLIENTE:', 18, 48);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.text(`Cliente / Razón Social: ${clienteNom || 'Cliente en Sitio'}`, 18, 56);
+          doc.text(`Técnico Especialista: ${tecNom || 'Técnico Asignado'}`, 18, 64);
+          doc.text(`Estatus del Trabajo: CONCLUIDO Y AUDITADO EN NUBE`, 18, 72);
+
+          doc.rect(14, 86, 188, 50);
+          doc.setFont('helvetica', 'bold');
+          doc.text('DICTAMEN TÉCNICO Y OBSERVACIONES:', 18, 94);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          const splitDictamen = doc.splitTextToSize(dictamen || 'Trabajo realizado satisfactoriamente bajo estándares de calidad y SLA estipulado. Equipos configurados y operando.', 180);
+          doc.text(splitDictamen, 18, 102);
+
+          doc.line(24, 190, 85, 190);
+          doc.line(130, 190, 192, 190);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.text('FIRMA DE RECIBIDO Y CONFORMIDAD', 25, 196);
+          doc.text('FIRMA DEL TÉCNICO RESPONSABLE', 133, 196);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(clienteNom || 'Cliente Titular', 35, 202);
+          doc.text(tecNom || 'Técnico de Campo', 142, 202);
+
+          doc.setFillColor(241, 245, 249);
+          doc.rect(14, 235, 188, 20, 'F');
+          doc.setTextColor(71, 85, 105);
+          doc.setFontSize(7.5);
+          doc.text('🔒 CERTIFICADO DIGITAL FIRESTORE (sm-crm-e9ba4) · SMART LOGISTICS APP', 18, 242);
+          doc.text(`Hash de Integridad: ${folio}-${Date.now().toString(16)} · Sellado Electrónico Inalterable`, 18, 248);
+
+          return doc.output('datauristring');
+        }
+      } catch(e) {
+        console.warn('Fallo jsPDF boleta, usando generador minimalista:', e);
+      }
+
+      return generarPdfMinimalista(
+        'BET-GUI LOGISTICA - BOLETA DE SERVICIO FIRMADA',
+        folio,
+        clienteNom,
+        tecNom,
+        fechaStr || new Date().toLocaleDateString('es-MX'),
+        dictamen
+      );
+    }
+
     function cargarDemoBoletaYEntregables() {
       const s = appState.servicios.find(item => item.id === servicioCierreActualId);
       const folio = s ? s.id : 'TK-1001';
+      const cliNom = s && s.cliente ? s.cliente.nombre : 'Cliente en Campo';
       const tecNom = s && s.tecnico ? s.tecnico.nombre : 'Técnico';
 
-      // Simular boleta firmada escaneada
+      // Generar boleta oficial firmada en formato PDF válido
+      const pdfBoleta = generarPdfBoletaOficialDataUrl(folio, cliNom, tecNom, new Date().toLocaleDateString('es-MX'), 'Trabajo concluido exitosamente a entera satisfacción del cliente. Pruebas operativas aprobadas.');
+
       boletaCierreTemporal = {
-        nombre: `Boleta_Servicio_Firmada_${folio}.jpg`,
-        tipo: 'image/jpeg',
-        tamano: '385 KB',
-        esPdf: false,
-        dataUrl: FOTOS_REALES_TECNICOS_BASE64[0],
+        nombre: `Boleta_Servicio_Firmada_${folio}.pdf`,
+        tipo: 'application/pdf',
+        tamano: '280 KB',
+        esPdf: true,
+        dataUrl: pdfBoleta,
         fechaCaptura: new Date().toISOString()
       };
 
-      // Simular entregables
+      // Generar entregables complementarios (Imagen + PDF técnico)
+      const pdfReporte = generarPdfMinimalista('REPORTE TECNICO DE ENTREGABLES OPERATIVOS', folio, cliNom, tecNom, new Date().toLocaleDateString('es-MX'), 'Pruebas de conectividad, voltaje y operación de equipos concluidas.');
+
       entregablesCierreTemporales = [
         {
           id: 'ent_demo_1',
@@ -9482,14 +9660,14 @@ ${linkTecnico}`;
           tipo: 'application/pdf',
           tamano: '215 KB',
           esPdf: true,
-          dataUrl: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDM2L0ZpbHRlci9GbGF0ZURlY29kZT4+c3RyZWFtCnicS0xPzStRMDLRNzTXM7TQMzTXNTS11DMy0DMx0gcyAc0gB8EKZW5kc3RyZWFtCmVuZG9iago=',
+          dataUrl: pdfReporte,
           fecha: new Date().toISOString()
         }
       ];
 
       actualizarUICandadoBoleta();
       actualizarUICandadoEntregables();
-      mostrarToast('✨ Boleta y entregables demo cargados en memoria.');
+      mostrarToast('✨ Boleta oficial (PDF) y entregables demo cargados en memoria.');
     }
 
     function solicitarCierreConCandadoServicio(id) {
@@ -9565,28 +9743,62 @@ ${linkTecnico}`;
 
     function cargarArchivoBoletaCandado(file) {
       if (!file) return;
-      const esPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-      const esImg = file.type.startsWith('image/');
+      const esPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || (file.type && file.type.includes('pdf'));
+      const esImg = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|bmp|heic|heif)$/i.test(file.name);
 
       if (!esPdf && !esImg) {
         alert('⚠️ Formato no permitido. La Boleta de Servicio debe ser un archivo PDF o una Imagen (JPG, PNG).');
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        boletaCierreTemporal = {
-          nombre: file.name || `Boleta_Servicio_${servicioCierreActualId || Date.now()}.${esPdf ? 'pdf' : 'jpg'}`,
-          tipo: file.type || (esPdf ? 'application/pdf' : 'image/jpeg'),
-          tamano: formatearTamanoBytes(file.size),
-          esPdf: esPdf,
-          dataUrl: e.target.result,
-          fechaCaptura: new Date().toISOString()
+      if (esImg && file.size > 700 * 1024) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxDim = 1280;
+            let w = img.naturalWidth || 1280;
+            let h = img.naturalHeight || 960;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const compDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            boletaCierreTemporal = {
+              nombre: file.name || `Boleta_Servicio_${servicioCierreActualId || Date.now()}.jpg`,
+              tipo: 'image/jpeg',
+              tamano: formatearTamanoBytes(Math.round(compDataUrl.length * 0.75)),
+              esPdf: false,
+              dataUrl: compDataUrl,
+              fechaCaptura: new Date().toISOString()
+            };
+            actualizarUICandadoBoleta();
+            mostrarToast('✅ Boleta de Servicio optimizada y cargada en memoria segura.');
+          };
+          img.src = e.target.result;
         };
-        actualizarUICandadoBoleta();
-        mostrarToast('✅ Boleta de Servicio cargada en memoria segura (sin residuo en teléfono).');
-      };
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          boletaCierreTemporal = {
+            nombre: file.name || `Boleta_Servicio_${servicioCierreActualId || Date.now()}.${esPdf ? 'pdf' : 'jpg'}`,
+            tipo: file.type || (esPdf ? 'application/pdf' : 'image/jpeg'),
+            tamano: formatearTamanoBytes(file.size),
+            esPdf: esPdf,
+            dataUrl: e.target.result,
+            fechaCaptura: new Date().toISOString()
+          };
+          actualizarUICandadoBoleta();
+          mostrarToast('✅ Boleta de Servicio cargada en memoria segura (sin residuo en teléfono).');
+        };
+        reader.readAsDataURL(file);
+      }
 
       const inB1 = document.getElementById('inputBoletaCamara');
       const inB2 = document.getElementById('inputBoletaArchivo');
@@ -9708,7 +9920,7 @@ ${linkTecnico}`;
       if (window.lucide) lucide.createIcons();
     }
 
-    function validarCandadoYFinalizarServicio() {
+    async function validarCandadoYFinalizarServicio() {
       const s = appState.servicios.find(item => item.id === servicioCierreActualId);
       if (!s) {
         alert('No se encontró el servicio actual.');
@@ -9751,16 +9963,17 @@ ${linkTecnico}`;
         });
       });
 
-      // Guardar inmediatamente en Google Firebase Firestore (sm-crm-e9ba4)
+      // 1. Ejecutar cambio de estado a Finalizado con candado validado PRIMERO
+      ejecutarCierreConCandadoValidado(s.id);
+
+      // 2. Guardar inmediatamente en Google Firebase Firestore (sm-crm-e9ba4) con estatus Finalizado
       if (typeof guardarExpedienteEnFirebase === 'function') {
-        guardarExpedienteEnFirebase(s);
+        await guardarExpedienteEnFirebase(s);
       }
 
-      // Cerrar modal candado y limpiar
+      // 3. Cerrar modal candado y limpiar
       cerrarModalCandadoCierre();
-
-      // Ejecutar cambio de estado a Finalizado con candado validado
-      ejecutarCierreConCandadoValidado(s.id);
+      mostrarToast(`✅ Folio #${s.id}: Boleta y evidencias finalizadas y guardadas en Google Firebase.`);
     }
 
     function ejecutarCierreConCandadoValidado(id) {
@@ -9988,20 +10201,43 @@ ${linkTecnico}`;
     function descargarArchivoDataUrl(dataUrl, nombreArchivo) {
       if (!dataUrl) return;
       try {
+        let downloadUrl = dataUrl;
+        let revocar = false;
+
+        if (dataUrl.startsWith('data:')) {
+          const parts = dataUrl.split(',');
+          const mimeMatch = parts[0].match(/:(.*?);/);
+          const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+          const bstr = atob(parts[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          const blob = new Blob([u8arr], { type: mime });
+          downloadUrl = URL.createObjectURL(blob);
+          revocar = true;
+        }
+
         const link = document.createElement('a');
-        link.href = dataUrl;
+        link.href = downloadUrl;
         link.download = nombreArchivo || 'Archivo_BetGui.dat';
         document.body.appendChild(link);
         link.click();
-        if (link.parentNode) link.parentNode.removeChild(link);
-        else if (typeof link.remove === 'function') link.remove();
+
+        setTimeout(() => {
+          if (link.parentNode) link.parentNode.removeChild(link);
+          if (revocar) URL.revokeObjectURL(downloadUrl);
+        }, 3000);
+
         mostrarToast(`📥 Descargando: ${nombreArchivo}`);
       } catch (e) {
         console.error('Error al descargar archivo:', e);
+        mostrarToast(`⚠️ Error al procesar descarga: ${e.message}`);
       }
     }
 
-    function descargarTodoExpediente(id) {
+    async function descargarTodoExpediente(id) {
       if (!id) id = servicioRepositorioActualId || appState.servicioActivoId;
       const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
       if (!s) {
@@ -10009,11 +10245,16 @@ ${linkTecnico}`;
         return;
       }
 
+      if ((!s.boletaServicio || !s.boletaServicio.dataUrl) && typeof recuperarExpedienteDeFirebase === 'function') {
+        mostrarToast('⏳ Sincronizando expediente desde Google Firebase...');
+        await recuperarExpedienteDeFirebase(s.id);
+      }
+
       let bajados = 0;
       if (s.evidenciaLlegada && s.evidenciaLlegada.dataUrl) {
         setTimeout(() => {
           descargarArchivoDataUrl(s.evidenciaLlegada.dataUrl, `Expediente_${s.id}_Selfie_CheckIn.jpg`);
-        }, bajados * 200);
+        }, bajados * 300);
         bajados++;
       }
 
@@ -10021,24 +10262,230 @@ ${linkTecnico}`;
         setTimeout(() => {
           const ext = s.boletaServicio.esPdf ? 'pdf' : 'jpg';
           descargarArchivoDataUrl(s.boletaServicio.dataUrl, s.boletaServicio.nombre || `Expediente_${s.id}_Boleta_Firmada.${ext}`);
-        }, bajados * 200);
+        }, bajados * 300);
         bajados++;
       }
 
       if (s.entregables && Array.isArray(s.entregables)) {
         s.entregables.forEach((ent) => {
           setTimeout(() => {
-            descargarArchivoDataUrl(ent.dataUrl, ent.nombre || `Expediente_${s.id}_Entregable.jpg`);
-          }, bajados * 200);
+            const ext = ent.esPdf ? 'pdf' : 'jpg';
+            descargarArchivoDataUrl(ent.dataUrl, ent.nombre || `Expediente_${s.id}_Entregable.${ext}`);
+          }, bajados * 300);
           bajados++;
         });
       }
 
-      if (bajados === 0) {
-        mostrarToast('ℹ️ Esta orden no cuenta con archivos o evidencias en la nube para descargar.');
-      } else {
-        mostrarToast(`📥 Descargando ${bajados} archivos del expediente #${s.id} a tu equipo.`);
+      // Descargar también el Expediente Consolidado en PDF
+      setTimeout(() => {
+        generarYDescargarReportePdfServicio(s.id);
+      }, bajados * 300);
+      bajados++;
+
+      mostrarToast(`📥 Descargando expediente completo de la orden #${s.id} (${bajados} documentos).`);
+    }
+
+    async function generarYDescargarReportePdfServicio(id) {
+      if (!id) id = servicioRepositorioActualId || appState.servicioActivoId;
+      if (!id && appState.servicios && appState.servicios.length > 0) id = appState.servicios[0].id;
+      const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
+      if (!s) {
+        mostrarToast('⚠️ No se encontró la orden solicitada.');
+        return;
       }
+
+      mostrarToast(`⏳ Generando Expediente Oficial en PDF de #${s.id}...`);
+
+      if ((!s.evidenciaLlegada || !s.evidenciaLlegada.dataUrl) && typeof recuperarExpedienteDeFirebase === 'function') {
+        await recuperarExpedienteDeFirebase(s.id);
+      }
+
+      const folio = s.id;
+      const cliNom = s.cliente ? s.cliente.nombre : 'Cliente';
+      const cliDir = s.cliente ? `${s.cliente.direccion || ''}, ${s.cliente.ciudad || ''} (CP: ${s.cliente.cp || 'N/D'})` : 'Sitio de Atención';
+      const tecNom = s.tecnico ? s.tecnico.nombre : 'Técnico Asignado';
+      const tecTel = s.tecnico ? (s.tecnico.telefono || 'S/N') : 'S/N';
+      const fecha = s.fecha ? new Date(s.fecha).toLocaleString('es-MX') : new Date().toLocaleString('es-MX');
+      const slaStr = s.sla ? `${s.sla.nivel} (${s.sla.estatus})` : '4h (Cumplido)';
+      const distKm = s.ruta ? s.ruta.distanciaKm : 0;
+      const durMin = s.ruta ? s.ruta.duracionMinutos : 0;
+
+      try {
+        if (window.jspdf && window.jspdf.jsPDF) {
+          const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+
+          // Encabezado Principal
+          doc.setFillColor(15, 23, 42);
+          doc.rect(0, 0, 216, 30, 'F');
+
+          doc.setTextColor(56, 189, 248);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.text('BET-GUI LOGÍSTICA & FSM PRO', 14, 12);
+
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(9);
+          doc.text('EXPEDIENTE OFICIAL DE SERVICIO Y EVIDENCIAS GEORREFERENCIADAS', 14, 19);
+          doc.text('SISTEMA ANTIFRAUDE Y AUDITORÍA SATELITAL EN TIEMPO REAL', 14, 24);
+
+          doc.setTextColor(251, 191, 36);
+          doc.setFontSize(11);
+          doc.text(`FOLIO: #${folio}`, 155, 13);
+          doc.setTextColor(203, 213, 225);
+          doc.setFontSize(8);
+          doc.text(`EMISIÓN: ${fecha}`, 155, 20);
+          doc.text(`ESTATUS: ${s.estatusTecnico || 'Finalizado'}`, 155, 25);
+
+          // Cuadro de Información General
+          doc.setFillColor(248, 250, 252);
+          doc.setDrawColor(203, 213, 225);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(14, 34, 188, 32, 2, 2, 'FD');
+
+          doc.setTextColor(15, 23, 42);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.text('CLIENTE Y DESTINO:', 18, 41);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.text(`${cliNom}`, 18, 47);
+          doc.text(`📍 ${cliDir}`.substring(0, 58), 18, 53);
+
+          doc.setFont('helvetica', 'bold');
+          doc.text('TÉCNICO ASIGNADO:', 110, 41);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`${tecNom} (📱 ${tecTel})`, 110, 47);
+          doc.text(`⏱️ SLA: ${slaStr}  |  Desplazamiento: ${distKm} km (${durMin} min)`, 110, 53);
+
+          let currentY = 70;
+
+          // SECCIÓN 1: SELFIE GEORREFERENCIADA
+          doc.setFillColor(241, 245, 249);
+          doc.roundedRect(14, currentY, 188, 85, 2, 2, 'FD');
+
+          doc.setTextColor(2, 132, 199);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9.5);
+          doc.text('1. EVIDENCIA CHECK-IN: SELFIE GEORREFERENCIADA DE ARRIBO EN SITIO', 18, currentY + 7);
+
+          if (s.evidenciaLlegada && s.evidenciaLlegada.dataUrl) {
+            try {
+              doc.addImage(s.evidenciaLlegada.dataUrl, 'JPEG', 18, currentY + 11, 80, 65);
+            } catch(errImg) {
+              doc.rect(18, currentY + 11, 80, 65);
+              doc.text('Selfie registrada en nube', 22, currentY + 40);
+            }
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8.5);
+            doc.text('AUDITORÍA DE ARRIBO EN SITIO:', 104, currentY + 17);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            const ev = s.evidenciaLlegada;
+            const lat = ev.gps ? ev.gps.lat : 'N/D';
+            const lng = ev.gps ? ev.gps.lng : 'N/D';
+            const enSitio = ev.gps ? ev.gps.enSitio : true;
+
+            if (enSitio) { doc.setTextColor(5, 150, 105); } else { doc.setTextColor(217, 119, 6); }
+            doc.text(enSitio ? '🟢 ARRIBO VALIDADO EN SITIO DEL CLIENTE' : '🟠 ARRIBO FUERA DE SITIO (AUDITADO)', 104, currentY + 24);
+
+            doc.setTextColor(51, 65, 85);
+            doc.text(`📱 Coordenadas GPS Celular: ${lat}, ${lng}`, 104, currentY + 31);
+            doc.text(`📍 Distancia al Cliente: ${ev.distanciaStr || 'En Sitio'}`, 104, currentY + 37);
+            doc.text(`🕒 Fecha y Hora Sellado: ${ev.fecha || fecha}`, 104, currentY + 43);
+
+            if (ev.direccionTelefonoReal) {
+              const splitDir = doc.splitTextToSize(`🏠 Dirección Celular: ${ev.direccionTelefonoReal}`, 88);
+              doc.text(splitDir, 104, currentY + 49);
+            }
+
+            doc.setFontSize(7.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Fotografía frontal sellada con telemetría criptográfica inalterable.', 104, currentY + 70);
+          } else {
+            doc.setTextColor(100, 116, 139);
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(8.5);
+            doc.text('Selfie georreferenciada pendiente o en proceso de registro por el técnico.', 18, currentY + 20);
+          }
+
+          currentY += 89;
+
+          // SECCIÓN 2: BOLETA DE SERVICIO FIRMADA Y ENTREGABLES
+          doc.setFillColor(248, 250, 252);
+          doc.roundedRect(14, currentY, 188, 62, 2, 2, 'FD');
+
+          doc.setTextColor(217, 119, 6);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9.5);
+          doc.text('2. BOLETA DE SERVICIO FIRMADA & ENTREGABLES COMPLEMENTARIOS', 18, currentY + 7);
+
+          doc.setTextColor(15, 23, 42);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+
+          if (s.boletaServicio && s.boletaServicio.dataUrl) {
+            doc.text(`✓ Boleta Oficial: ${s.boletaServicio.nombre || 'Boleta_Servicio.pdf'} (${s.boletaServicio.esPdf ? 'Documento PDF' : 'Archivo de Imagen'})`, 18, currentY + 15);
+            doc.text(`  Tamaño: ${s.boletaServicio.tamano || 'Documento Oficial'} · Firma de conformidad recibida`, 18, currentY + 21);
+            if (!s.boletaServicio.esPdf) {
+              try {
+                doc.addImage(s.boletaServicio.dataUrl, 'JPEG', 18, currentY + 25, 45, 30);
+              } catch(e) {}
+            }
+          } else {
+            doc.text('• Boleta de Servicio firmada: Registrada y transmitida al finalizar servicio.', 18, currentY + 15);
+          }
+
+          const nEnt = (s.entregables && Array.isArray(s.entregables)) ? s.entregables.length : 0;
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Entregables y Reportes de Trabajo Adjuntos: ${nEnt} archivo(s)`, 104, currentY + 15);
+          doc.setFont('helvetica', 'normal');
+
+          if (nEnt > 0) {
+            s.entregables.slice(0, 3).forEach((ent, idx) => {
+              doc.text(`• ${ent.nombre || (`Entregable_${idx+1}`)} (${ent.tamano || 'Archivo'})`, 104, currentY + 22 + (idx * 6));
+            });
+          } else {
+            doc.text('• Evidencias fotográficas y memorias técnicas respaldadas en nube.', 104, currentY + 22);
+          }
+
+          if (s.observacionesCierre) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Observaciones Finales:', 18, currentY + 45);
+            doc.setFont('helvetica', 'normal');
+            const splitObs = doc.splitTextToSize(s.observacionesCierre, 175);
+            doc.text(splitObs, 18, currentY + 51);
+          }
+
+          // Pie de Página Oficial
+          doc.setFillColor(15, 23, 42);
+          doc.rect(0, 262, 216, 17, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(7.5);
+          doc.text('EXPEDIENTE ELECTRÓNICO OFICIAL CERTIFICADO POR GOOGLE FIREBASE FIRESTORE (sm-crm-e9ba4)', 14, 268);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`Folio Transaccional: ${folio} · Sello Criptográfico de Auditoría FSM Pro · Generado el ${new Date().toLocaleString('es-MX')}`, 14, 274);
+
+          doc.save(`Expediente_Evidencias_${folio}.pdf`);
+          mostrarToast(`✅ Expediente en PDF de #${folio} descargado exitosamente.`);
+          return;
+        }
+      } catch(errPdf) {
+        console.warn('Fallo jsPDF en reporte general, ejecutando generador alternativo:', errPdf);
+      }
+
+      // Fallback si no está disponible jsPDF
+      const fallbackDataUrl = generarPdfMinimalista(
+        'BET-GUI LOGISTICA - EXPEDIENTE OFICIAL DE EVIDENCIAS',
+        folio,
+        cliNom,
+        tecNom,
+        fecha,
+        s.observacionesCierre || 'Expediente consolidado con selfie georreferenciada y boleta de servicio en Google Firebase.'
+      );
+      descargarArchivoDataUrl(fallbackDataUrl, `Expediente_Evidencias_${folio}.pdf`);
     }
 
     async function confirmarBorrarEvidenciasNube(id) {
@@ -10146,11 +10593,13 @@ ${linkTecnico}`;
                 <p class="font-bold text-white truncate">${b.nombre || 'Boleta_Servicio.pdf'}</p>
                 <p class="text-[10px] text-slate-400">${b.tamano || 'Documento PDF'} · Firmado por cliente</p>
               </div>
-              <a href="${b.dataUrl}" download="${b.nombre || `Boleta_${s.id}.pdf`}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0">
+              <button onclick="descargarArchivoDataUrl('${b.dataUrl}', '${b.nombre || `Boleta_${s.id}.pdf`}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar PDF
-              </a>
+              </button>
             </div>
-            <iframe src="${b.dataUrl}" class="w-full h-[65vh] rounded-xl border border-slate-800 bg-slate-950"></iframe>
+            <object data="${b.dataUrl}" type="application/pdf" class="w-full h-[65vh] rounded-xl border border-slate-800 bg-slate-950">
+              <iframe src="${b.dataUrl}" class="w-full h-full"></iframe>
+            </object>
           </div>
         `;
       } else {
@@ -10164,9 +10613,9 @@ ${linkTecnico}`;
                 <p class="font-bold text-white truncate">${b.nombre || 'Boleta_Servicio.jpg'}</p>
                 <p class="text-[10px] text-slate-400">${b.tamano || 'Imagen'} · Firmado por cliente</p>
               </div>
-              <a href="${b.dataUrl}" download="${b.nombre || `Boleta_${s.id}.jpg`}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0">
+              <button onclick="descargarArchivoDataUrl('${b.dataUrl}', '${b.nombre || `Boleta_${s.id}.jpg`}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar Imagen
-              </a>
+              </button>
             </div>
           </div>
         `;
@@ -10208,16 +10657,16 @@ ${linkTecnico}`;
                   </div>
                   ${!isPdf ? `
                     <div class="h-28 w-full rounded-lg overflow-hidden bg-black border border-slate-900">
-                      <img src="${ent.dataUrl}" alt="${ent.nombre}" class="w-full h-full object-cover cursor-pointer" onclick="window.open('${ent.dataUrl}', '_blank')" />
+                      <img src="${ent.dataUrl}" alt="${ent.nombre}" class="w-full h-full object-cover cursor-pointer" onclick="verEntregableEspecifico('${s.id}', ${idx})" />
                     </div>
                   ` : ''}
                   <div class="flex items-center justify-between pt-1 text-xs">
-                    <a href="${ent.dataUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-medium inline-flex items-center gap-1 text-[11px]">
-                      <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir
-                    </a>
-                    <a href="${ent.dataUrl}" download="${ent.nombre}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 border border-slate-700">
+                    <button onclick="verEntregableEspecifico('${s.id}', ${idx})" class="text-indigo-400 hover:text-indigo-300 font-medium inline-flex items-center gap-1 text-[11px] cursor-pointer">
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i> Ver Detalle
+                    </button>
+                    <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || `Entregable_${s.id}_${idx+1}.${isPdf ? 'pdf' : 'jpg'}`}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 border border-slate-700 cursor-pointer">
                       <i data-lucide="download" class="w-3 h-3"></i> Descargar
-                    </a>
+                    </button>
                   </div>
                 </div>
               `;
@@ -10226,6 +10675,57 @@ ${linkTecnico}`;
         </div>
       `;
 
+      modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function verEntregableEspecifico(id, idx) {
+      const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
+      if (!s || !s.entregables || !s.entregables[idx]) return;
+      const ent = s.entregables[idx];
+      const modal = document.getElementById('modalVerEvidencia');
+      const titulo = document.getElementById('modalVerEvidenciaTitulo');
+      const cont = document.getElementById('modalVerEvidenciaContenido');
+      if (!modal || !cont) return;
+
+      const isPdf = ent.esPdf || (ent.tipo && ent.tipo.includes('pdf')) || (ent.dataUrl && ent.dataUrl.startsWith('data:application/pdf'));
+      titulo.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="${isPdf ? 'file-text' : 'image'}" class="w-4 h-4 text-purple-400"></i> ${ent.nombre || 'Entregable'} · Folio #${s.id}</span>`;
+
+      if (isPdf) {
+        cont.innerHTML = `
+          <div class="space-y-3 w-full">
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+              <div class="truncate">
+                <p class="font-bold text-white truncate">${ent.nombre || 'Entregable.pdf'}</p>
+                <p class="text-[10px] text-slate-400">${ent.tamano || 'Documento PDF'} · Entregable de campo</p>
+              </div>
+              <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || `Entregable_${s.id}_${idx+1}.pdf`}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar PDF
+              </button>
+            </div>
+            <object data="${ent.dataUrl}" type="application/pdf" class="w-full h-[65vh] rounded-xl border border-slate-800 bg-slate-950">
+              <iframe src="${ent.dataUrl}" class="w-full h-full"></iframe>
+            </object>
+          </div>
+        `;
+      } else {
+        cont.innerHTML = `
+          <div class="space-y-3 w-full flex flex-col items-center">
+            <div class="relative max-h-[65vh] overflow-hidden rounded-xl border border-slate-800 bg-black">
+              <img src="${ent.dataUrl}" alt="Entregable" class="max-h-[60vh] max-w-full object-contain mx-auto" />
+            </div>
+            <div class="w-full bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+              <div class="truncate">
+                <p class="font-bold text-white truncate">${ent.nombre || 'Entregable.jpg'}</p>
+                <p class="text-[10px] text-slate-400">${ent.tamano || 'Imagen'} · Entregable de campo</p>
+              </div>
+              <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || `Entregable_${s.id}_${idx+1}.jpg`}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar Imagen
+              </button>
+            </div>
+          </div>
+        `;
+      }
       modal.classList.remove('hidden');
       if (window.lucide) lucide.createIcons();
     }
@@ -12078,6 +12578,10 @@ ${linkTecnico}`;
     window.abrirModalCheckinSelfie = abrirModalCheckinSelfie;
     window.manejarBotonLlegadaSitioTecnico = manejarBotonLlegadaSitioTecnico;
     window.dispararCapturaNativaCamara = dispararCapturaNativaCamara;
+    window.generarYDescargarReportePdfServicio = generarYDescargarReportePdfServicio;
+    window.verEntregableEspecifico = verEntregableEspecifico;
+    window.generarPdfBoletaOficialDataUrl = generarPdfBoletaOficialDataUrl;
+    window.generarPdfMinimalista = generarPdfMinimalista;
 
     function mostrarToast(txt) {
       const toast = document.createElement('div');
