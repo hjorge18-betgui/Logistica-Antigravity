@@ -793,12 +793,14 @@
             </span>
 
             <select id="slaSeleccionado" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-medium">
-              <option value="1h">SLA 1 Hora (Crítico)</option>
-              <option value="2h">SLA 2 Horas (Alta Prioridad)</option>
-              <option value="4h" selected>SLA 4 Horas (Estándar)</option>
-              <option value="8h">SLA 8 Horas</option>
-              <option value="1d">SLA 1 Día (24 Horas)</option>
-              <option value="2d">SLA 2 Días (48 Horas)</option>
+              <option value="">-- Seleccionar SLA Obligatorio * --</option>
+              <option value="2h">🔥 SLA 2 Horas (Prioridad Alta - Urgente)</option>
+              <option value="4h">⏱️ SLA 4 Horas (Estándar)</option>
+              <option value="5h">💤 SLA 5 Horas (Prioridad Baja)</option>
+              <option value="6h">💤 SLA 6 Horas (Prioridad Baja)</option>
+              <option value="8h">💤 SLA 8 Horas (Prioridad Baja)</option>
+              <option value="1d">💤 SLA 24 Horas / 1 Día (Prioridad Baja)</option>
+              <option value="1h">🚨 SLA 1 Hora (Crítico)</option>
             </select>
           </div>
 
@@ -936,6 +938,10 @@
             <i data-lucide="folder" class="w-3.5 h-3.5 text-cyan-400"></i>
             <span>📁 Carpeta Selfies</span>
           </button>
+          <button id="viewBtnFlotaGlobal" onclick="cambiarModoVista('flotaGlobal')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition" title="Mapa Global de Toda la Flota y Clientes en Tiempo Real">
+            <i data-lucide="radar" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>🌐 Flota en Vivo</span>
+          </button>
         </div>
 
         <div class="flex items-center gap-1 overflow-x-auto text-xs">
@@ -1037,7 +1043,7 @@
                   <th class="p-2.5">Radio (1h)</th>
                   <th class="p-2.5">SLA</th>
                   <th class="p-2.5">Costo</th>
-                  <th class="p-2.5">Estatus / Límite (15m)</th>
+                  <th class="p-2.5">Estatus / Límite (5m)</th>
                   <th class="p-2.5 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -1060,7 +1066,7 @@
                 <span>⭐ Matriz de Ranking & Desempeño Operativo de Técnicos</span>
               </h2>
               <p class="text-xs text-slate-400 mt-0.5">
-                Evaluación continua en tiempo real: premiación por aceptación puntual (&lt;15 min) y penalización por cancelación o rechazo.
+                Evaluación continua en tiempo real: premiación por aceptación puntual (&lt;5 min) y penalización por cancelación o rechazo.
               </p>
             </div>
             <div class="flex items-center gap-2">
@@ -1126,7 +1132,7 @@
                   <tr>
                     <th class="p-3">ID / Técnico</th>
                     <th class="p-3 text-center">Disponibilidad</th>
-                    <th class="p-3 text-center">50% Resp. 15m</th>
+                    <th class="p-3 text-center">50% Resp. 5m</th>
                     <th class="p-3 text-center">30% Puntualidad Sitio</th>
                     <th class="p-3 text-center">20% Solución Sitio</th>
                     <th class="p-3 text-center">Prom. Total Atención</th>
@@ -1150,9 +1156,9 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-[11px]">
               <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
                 <p class="text-amber-400 font-semibold flex items-center gap-1">
-                  <span>⏱️ 50% Aceptación en 15 min</span>
+                  <span>⏱️ 50% Aceptación en 5 min</span>
                 </p>
-                <p class="text-slate-400 mt-1">Penaliza con un <strong>50% del peso</strong> si el técnico no acepta o no cancela dentro de los 15 minutos tras el despacho por WhatsApp.</p>
+                <p class="text-slate-400 mt-1">Penaliza con un <strong>50% del peso</strong> si el técnico no acepta o no cancela dentro de los 5 minutos tras el despacho por WhatsApp.</p>
               </div>
               <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
                 <p class="text-indigo-400 font-semibold flex items-center gap-1">
@@ -1468,6 +1474,78 @@
 
         </div>
 
+        <!-- ============================================================= -->
+        <!-- PANEL: FLOTA EN VIVO - MAPA GLOBAL DE TÉCNICOS Y CLIENTES     -->
+        <!-- ============================================================= -->
+        <div id="flotaGlobalSectionContainer" class="hidden flex-1 w-full h-full flex flex-col overflow-hidden bg-slate-950">
+          
+          <!-- Cabecera de Control de Flota Global -->
+          <div class="bg-slate-900/90 border-b border-slate-800 px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 z-10">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <i data-lucide="radar" class="w-4 h-4"></i>
+              </span>
+              <div>
+                <h3 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>Monitoreo Global de Flota en Vivo</span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                </h3>
+                <p class="text-[10px] text-slate-400">Vista consolidada en tiempo real de todos los técnicos y clientes con SLA activo. Clic en cualquier unidad o ruta para abrir en la cola.</p>
+              </div>
+            </div>
+
+            <!-- Filtros rápidos de Flota y Leyendas -->
+            <div class="flex items-center gap-1.5 flex-wrap text-xs">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mr-1">Filtrar:</span>
+              <button onclick="filtrarFlotaGlobal('todos')" id="flotaFiltroBtn_todos" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-600 text-white shadow">Todos (<span id="flotaCountTodos">0</span>)</button>
+              <button onclick="filtrarFlotaGlobal('2h')" id="flotaFiltroBtn_2h" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition">🔥 SLA 2h Alta (<span id="flotaCount2h">0</span>)</button>
+              <button onclick="filtrarFlotaGlobal('4h')" id="flotaFiltroBtn_4h" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition">⏱️ SLA 4h (<span id="flotaCount4h">0</span>)</button>
+              <button onclick="filtrarFlotaGlobal('5h+')" id="flotaFiltroBtn_5h" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">💤 SLA 5h+ (<span id="flotaCount5h">0</span>)</button>
+              <button onclick="filtrarFlotaGlobal('nocturno')" id="flotaFiltroBtn_nocturno" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-950/50 hover:bg-purple-900 text-purple-300 border border-purple-800/60 transition">🌙 Nocturnos (<span id="flotaCountNocturno">0</span>)</button>
+              
+              <button onclick="centrarFlotaGlobal()" class="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center gap-1 transition ml-1" title="Ajustar zoom para ver toda la flota">
+                <i data-lucide="crosshair" class="w-3 h-3"></i>
+                <span>Centrar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mapa Leaflet Global a Pantalla Completa -->
+          <div class="relative flex-1 w-full h-full min-h-[350px]">
+            <div id="leafletMapFlotaGlobal" class="w-full h-full z-0"></div>
+
+            <!-- Panel Flotante de Resumen y Métricas de Flota -->
+            <div class="absolute bottom-3 left-3 z-[400] bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl p-2.5 text-xs shadow-2xl max-w-xs space-y-1.5 pointer-events-auto">
+              <div class="flex items-center justify-between text-[11px] font-bold text-white border-b border-slate-800 pb-1">
+                <span class="flex items-center gap-1">🌐 Estado de la Flota</span>
+                <span id="flotaBadgeActivos" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px]">0 Activos</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+                <div class="bg-slate-950/70 p-1.5 rounded border border-slate-800/80">
+                  <span class="text-slate-400 block">🚗 Técnicos en Campo:</span>
+                  <span id="flotaMetricaTecnicos" class="text-white font-bold font-mono">0</span>
+                </div>
+                <div class="bg-slate-950/70 p-1.5 rounded border border-slate-800/80">
+                  <span class="text-slate-400 block">🏢 Clientes Destino:</span>
+                  <span id="flotaMetricaClientes" class="text-white font-bold font-mono">0</span>
+                </div>
+                <div class="bg-slate-950/70 p-1.5 rounded border border-rose-900/40">
+                  <span class="text-rose-400 block">🔥 Alta Prioridad 2h:</span>
+                  <span id="flotaMetricaAlta" class="text-rose-300 font-bold font-mono">0</span>
+                </div>
+                <div class="bg-slate-950/70 p-1.5 rounded border border-purple-900/40">
+                  <span class="text-purple-400 block">🌙 Turno Nocturno:</span>
+                  <span id="flotaMetricaNocturna" class="text-purple-300 font-bold font-mono">0</span>
+                </div>
+              </div>
+              <div class="text-[9px] text-slate-400 pt-0.5 italic flex items-center gap-1">
+                <span>💡 Haz clic en cualquier marcador o trazo para abrir la orden en la cola de servicios.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
     </div>
 
   </div>
@@ -1697,7 +1775,7 @@
         <!-- Consejo / Estado -->
         <div class="grid grid-cols-2 gap-2 pt-1 text-center text-xs">
           <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-            <span class="text-[10px] text-slate-400 block">⏱️ Tasa 15m (Peso 50%)</span>
+            <span class="text-[10px] text-slate-400 block">⏱️ Tasa 5m (Peso 50%)</span>
             <span id="tecRankTasa15m" class="text-sm font-black text-amber-400">100%</span>
           </div>
           <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
@@ -1716,7 +1794,7 @@
 
         <!-- Consejo / Estado -->
         <div id="tecRankConsejo" class="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-[11px] leading-relaxed">
-          ¡Excelente desempeño! Cumplir con la aceptación en 15 minutos y llegar puntual dentro del SLA garantiza tu prioridad máxima en rutas comerciales.
+          ¡Excelente desempeño! Cumplir con la aceptación en 5 minutos y llegar puntual dentro del SLA garantiza tu prioridad máxima en rutas comerciales.
         </div>
       </div>
 
@@ -5908,7 +5986,7 @@
           serv.whatsappEnviado = false;
           serv.timestampEnvioWhatsapp = null;
           serv.timestampAsignacion = null;
-          serv.segundosRestantes = 900;
+          serv.segundosRestantes = 300;
           guardarEnAlmacenamientoLocal();
           renderizarTabla();
           if (appState.servicioActivoId === data.id) {
@@ -5925,13 +6003,13 @@
           serv.whatsappEnviado = true;
           serv.timestampEnvioWhatsapp = data.timestampEnvioWhatsapp || Date.now();
           serv.timestampAsignacion = data.timestampEnvioWhatsapp || Date.now();
-          serv.segundosRestantes = 900;
+          serv.segundosRestantes = 300;
           guardarEnAlmacenamientoLocal();
           renderizarTabla();
           if (appState.servicioActivoId === data.id) {
             actualizarBarraTelemetria(serv);
           }
-          mostrarToast(`📲 WhatsApp despachado a ${serv.tecnico.nombre} para Folio #${data.id}. Temporizador 15 min iniciado.`);
+          mostrarToast(`📲 WhatsApp despachado a ${serv.tecnico.nombre} para Folio #${data.id}. Temporizador 5 min iniciado.`);
         }
       } else if (type === 'RANKING_UPDATE') {
         const tec = catalogoTecnicos.find(t => t.id === data.tecId || t.nombre.toLowerCase().trim() === (data.nombre || '').toLowerCase().trim());
@@ -6035,6 +6113,10 @@
       tecnicoADarDeBaja: null,
       filtroActual: 'todos',
       modoVista: 'split',
+      leafletMapFlotaGlobal: null,
+      capaFlotaGlobal: null,
+      markersGroupFlotaGlobal: null,
+      filtroFlotaSla: 'todos',
       sidebarAbierto: true,
       contadorFolio: 1001,
       tarifaBanderazo: 120.00,
@@ -6115,7 +6197,7 @@
                 whatsappEnviado: true,
                 timestampEnvioWhatsapp: p.ts || Date.now(),
                 timestampAsignacion: p.ts || Date.now(),
-                segundosRestantes: 900
+                segundosRestantes: 300,
               };
               appState.servicios.unshift(s);
               registrarOActualizarTecnicoDesdeDatos(s.tecnico);
@@ -6670,6 +6752,7 @@
 
       setTimeout(() => {
         if (appState.leafletMapAdmin) appState.leafletMapAdmin.invalidateSize();
+        if (appState.leafletMapFlotaGlobal) appState.leafletMapFlotaGlobal.invalidateSize();
       }, 300);
     }
 
@@ -6808,9 +6891,21 @@
       };
     }
 
+    function verificarEsServicioNocturno(horaInicio, fechaIso) {
+      let hora = 9;
+      if (horaInicio && typeof horaInicio === 'string' && horaInicio.includes(':')) {
+        hora = parseInt(horaInicio.split(':')[0], 10);
+      } else if (fechaIso) {
+        hora = new Date(fechaIso).getHours();
+      } else {
+        hora = new Date().getHours();
+      }
+      return (hora >= 18 || hora < 6);
+    }
+
     function evaluarSLA(minutosTraslado, nivel) {
-      const mapaSla = { '1h': 60, '2h': 120, '4h': 240, '8h': 480, '1d': 1440, '2d': 2880 };
-      const permitidos = mapaSla[nivel] || 120;
+      const mapaSla = { '1h': 60, '2h': 120, '4h': 240, '5h': 300, '6h': 360, '8h': 480, '1d': 1440, '2d': 2880 };
+      const permitidos = mapaSla[nivel] || 240;
       const ratio = minutosTraslado / permitidos;
 
       let estatus = 'Cumplido';
@@ -6824,7 +6919,24 @@
         badgeClass = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
       }
 
-      return { estatus, badgeClass, permitidos };
+      // Prioridad operativa según requerimiento:
+      // 2h (y 1h) -> Prioridad Alta (Urgente - Sobresale visualmente)
+      // 4h -> Estándar
+      // 5h en adelante -> Prioridad Baja
+      let prioridad = 'Estándar';
+      let prioridadColor = '#6366f1';
+      let prioridadBadge = '⏱️ Estándar';
+      if (nivel === '2h' || nivel === '1h') {
+        prioridad = 'Alta';
+        prioridadColor = '#f43f5e';
+        prioridadBadge = '🔥 Alta Prioridad';
+      } else if (['5h', '6h', '8h', '1d', '2d'].includes(nivel)) {
+        prioridad = 'Baja';
+        prioridadColor = '#64748b';
+        prioridadBadge = '💤 Baja';
+      }
+
+      return { estatus, badgeClass, permitidos, prioridad, prioridadColor, prioridadBadge };
     }
 
     function calcularCosto(distanciaKm) {
@@ -6909,7 +7021,8 @@
             whatsappEnviado: false,
             timestampEnvioWhatsapp: null,
             timestampAsignacion: null,
-            segundosRestantes: 900
+            segundosRestantes: 300,
+            esNocturno: verificarEsServicioNocturno(c.hora)
           };
         });
 
@@ -7109,6 +7222,8 @@
 
       if (inCliNom) inCliNom.value = '';
       if (inCliDir) inCliDir.value = '';
+      const inSlaManual = document.getElementById('slaSeleccionado');
+      if (inSlaManual) inSlaManual.value = '';
       if (inCliEst) {
         inCliEst.value = '';
         actualizarCiudades('cliEstado', 'cliCiudad');
@@ -7169,7 +7284,48 @@
       if (tecTelRaw.length === 10) tecTelRaw = '52' + tecTelRaw;
       const tecTel = tecTelRaw || '525585601910';
       const tecHora = document.getElementById('tecHoraInicio')?.value || '09:00';
-      const slaNivel = document.getElementById('slaSeleccionado')?.value || '4h';
+      const slaNivel = (document.getElementById('slaSeleccionado')?.value || '').trim();
+
+      // 🔒 CANDADO DE SEGURIDAD OPERATIVA: SLA Obligatorio
+      if (!slaNivel) {
+        alert('🔒 CANDADO DE SEGURIDAD OPERATIVA:\n\nNo se puede continuar con el proceso de despacho porque NO hay un nivel de SLA programado.\n\nPor favor selecciona el nivel de SLA requerido (ej. 🔥 2h Alta Prioridad, ⏱️ 4h Estándar, etc.) para continuar.');
+        const elSla = document.getElementById('slaSeleccionado');
+        if (elSla) {
+          elSla.focus();
+          elSla.classList.add('ring-2', 'ring-rose-500', 'border-rose-500');
+        }
+        return;
+      } else {
+        const elSla = document.getElementById('slaSeleccionado');
+        if (elSla) elSla.classList.remove('ring-2', 'ring-rose-500', 'border-rose-500');
+      }
+
+      // 📮 CANDADO DE VALIDACIÓN ESTRICTA: Código Postal de México (Exactamente 5 Dígitos)
+      if (!cliCp || !/^\d{5}$/.test(cliCp)) {
+        alert(`⚠️ CÓDIGO POSTAL INVÁLIDO DEL CLIENTE:\n\nEl Código Postal ingresado ("${cliCp || ''}") no cumple con la norma oficial mexicana.\n\nEn la República Mexicana todo Código Postal debe contener exactamente 5 dígitos numéricos (ej. 03700, 50120, 97000).\n\nPor favor corrige el Código Postal del Cliente para continuar.`);
+        const elCliCp = document.getElementById('cliCp');
+        if (elCliCp) {
+          elCliCp.focus();
+          elCliCp.classList.add('ring-2', 'ring-rose-500', 'border-rose-500');
+        }
+        return;
+      } else {
+        const elCliCp = document.getElementById('cliCp');
+        if (elCliCp) elCliCp.classList.remove('ring-2', 'ring-rose-500', 'border-rose-500');
+      }
+
+      if (!tecCp || !/^\d{5}$/.test(tecCp)) {
+        alert(`⚠️ CÓDIGO POSTAL INVÁLIDO DEL TÉCNICO:\n\nEl Código Postal de origen del Técnico ("${tecCp || ''}") no cumple con la norma oficial mexicana.\n\nEn la República Mexicana todo Código Postal debe contener exactamente 5 dígitos numéricos (ej. 03700, 50120, 97000).\n\nPor favor corrige el Código Postal del Técnico para continuar.`);
+        const elTecCp = document.getElementById('tecCp');
+        if (elTecCp) {
+          elTecCp.focus();
+          elTecCp.classList.add('ring-2', 'ring-rose-500', 'border-rose-500');
+        }
+        return;
+      } else {
+        const elTecCp = document.getElementById('tecCp');
+        if (elTecCp) elTecCp.classList.remove('ring-2', 'ring-rose-500', 'border-rose-500');
+      }
 
       // Sincronización y validación automática de Estado y Ciudad desde Código Postal (0ms)
       if (cliCp.length === 5) {
@@ -7358,7 +7514,8 @@
             cp: tecCp,
             ranking: rankingFinal
           };
-          servicioExistente.sla = { nivel: slaNivel, estatus: evalSla.estatus, badgeClass: evalSla.badgeClass };
+          servicioExistente.sla = { nivel: slaNivel, estatus: evalSla.estatus, badgeClass: evalSla.badgeClass, prioridad: evalSla.prioridad, prioridadColor: evalSla.prioridadColor, prioridadBadge: evalSla.prioridadBadge };
+          servicioExistente.esNocturno = verificarEsServicioNocturno(tecHora, servicioExistente.fecha);
           servicioExistente.ruta = {
             distanciaKm: ruta.distanciaKm,
             duracionMinutos: ruta.duracionMinutos,
@@ -7405,7 +7562,7 @@
             cp: tecCp,
             ranking: rankingFinal
           },
-          sla: { nivel: slaNivel, estatus: evalSla.estatus, badgeClass: evalSla.badgeClass },
+          sla: { nivel: slaNivel, estatus: evalSla.estatus, badgeClass: evalSla.badgeClass, prioridad: evalSla.prioridad, prioridadColor: evalSla.prioridadColor, prioridadBadge: evalSla.prioridadBadge },
           ruta: {
             distanciaKm: ruta.distanciaKm,
             duracionMinutos: ruta.duracionMinutos,
@@ -7422,7 +7579,8 @@
           whatsappEnviado: false,
           timestampEnvioWhatsapp: null,
           timestampAsignacion: null,
-          segundosRestantes: 900
+          segundosRestantes: 300,
+          esNocturno: verificarEsServicioNocturno(tecHora, new Date().toISOString())
         };
 
         appState.servicios.unshift(nuevoServicio);
@@ -7747,6 +7905,266 @@
       actualizarBarraTelemetria(serv);
     }
 
+    // =========================================================================
+    // MÓDULO GLOBAL DE FLOTA EN VIVO: MAPA SIMULTÁNEO DE TÉCNICOS Y CLIENTES
+    // =========================================================================
+    function inicializarMapaFlotaGlobal() {
+      const centroMexico = [23.6345, -102.5528];
+      if (!appState.leafletMapFlotaGlobal) {
+        const mapContainer = document.getElementById('leafletMapFlotaGlobal');
+        if (!mapContainer) return;
+
+        appState.leafletMapFlotaGlobal = L.map('leafletMapFlotaGlobal', {
+          center: centroMexico,
+          zoom: 5,
+          zoomControl: true
+        });
+
+        appState.capaFlotaGlobal = crearCapaTilesRobusta('calles').addTo(appState.leafletMapFlotaGlobal);
+        appState.markersGroupFlotaGlobal = L.layerGroup().addTo(appState.leafletMapFlotaGlobal);
+      }
+
+      setTimeout(() => {
+        if (appState.leafletMapFlotaGlobal) appState.leafletMapFlotaGlobal.invalidateSize();
+      }, 250);
+    }
+
+    function renderizarMapaFlotaGlobal() {
+      if (!appState.leafletMapFlotaGlobal) {
+        inicializarMapaFlotaGlobal();
+      }
+      if (!appState.leafletMapFlotaGlobal || !appState.markersGroupFlotaGlobal) return;
+
+      appState.markersGroupFlotaGlobal.clearLayers();
+
+      const serviciosActivos = (appState.servicios || []).filter(s => !s.eliminada && s.estatusTecnico !== 'Cancelado');
+
+      // Actualizar contadores y badges del panel flotante
+      let cTodos = serviciosActivos.length;
+      let c2h = 0;
+      let c4h = 0;
+      let c5h = 0;
+      let cNocturno = 0;
+
+      serviciosActivos.forEach(s => {
+        const esNoc = s.esNocturno || verificarEsServicioNocturno(s.horaInicio, s.fecha);
+        if (esNoc) cNocturno++;
+        const nivel = (s.sla && s.sla.nivel) || '4h';
+        if (nivel === '2h' || nivel === '1h') c2h++;
+        else if (nivel === '4h') c4h++;
+        else c5h++;
+      });
+
+      const elCountTodos = document.getElementById('flotaCountTodos');
+      if (elCountTodos) elCountTodos.innerText = cTodos;
+      const elCount2h = document.getElementById('flotaCount2h');
+      if (elCount2h) elCount2h.innerText = c2h;
+      const elCount4h = document.getElementById('flotaCount4h');
+      if (elCount4h) elCount4h.innerText = c4h;
+      const elCount5h = document.getElementById('flotaCount5h');
+      if (elCount5h) elCount5h.innerText = c5h;
+      const elCountNocturno = document.getElementById('flotaCountNocturno');
+      if (elCountNocturno) elCountNocturno.innerText = cNocturno;
+
+      const elMetTec = document.getElementById('flotaMetricaTecnicos');
+      if (elMetTec) elMetTec.innerText = cTodos;
+      const elMetCli = document.getElementById('flotaMetricaClientes');
+      if (elMetCli) elMetCli.innerText = cTodos;
+      const elMetAlta = document.getElementById('flotaMetricaAlta');
+      if (elMetAlta) elMetAlta.innerText = c2h;
+      const elMetNoc = document.getElementById('flotaMetricaNocturna');
+      if (elMetNoc) elMetNoc.innerText = cNocturno;
+      const elBadgeAct = document.getElementById('flotaBadgeActivos');
+      if (elBadgeAct) elBadgeAct.innerText = `${cTodos} Activos`;
+
+      // Filtrar según el botón seleccionado
+      const filtro = appState.filtroFlotaSla || 'todos';
+      let listaFiltrada = serviciosActivos;
+      if (filtro === '2h') {
+        listaFiltrada = serviciosActivos.filter(s => s.sla && (s.sla.nivel === '2h' || s.sla.nivel === '1h'));
+      } else if (filtro === '4h') {
+        listaFiltrada = serviciosActivos.filter(s => s.sla && s.sla.nivel === '4h');
+      } else if (filtro === '5h+') {
+        listaFiltrada = serviciosActivos.filter(s => s.sla && ['5h', '6h', '8h', '1d', '2d'].includes(s.sla.nivel));
+      } else if (filtro === 'nocturno') {
+        listaFiltrada = serviciosActivos.filter(s => s.esNocturno || verificarEsServicioNocturno(s.horaInicio, s.fecha));
+      }
+
+      const allBounds = [];
+
+      listaFiltrada.forEach(s => {
+        if (!s.ruta) return;
+        const o = (s.gpsEnVivo && s.gpsEnVivo.lat && s.gpsEnVivo.lng) 
+          ? { lat: s.gpsEnVivo.lat, lng: s.gpsEnVivo.lng }
+          : (s.ruta.origenCoords || { lat: 20.9674, lng: -89.5926 });
+        const d = s.ruta.destinoCoords || { lat: 21.1350, lng: -86.7580 };
+
+        allBounds.push([o.lat, o.lng]);
+        allBounds.push([d.lat, d.lng]);
+
+        const esAlta = (s.sla && (s.sla.nivel === '2h' || s.sla.nivel === '1h'));
+        const esBaja = (s.sla && ['5h', '6h', '8h', '1d', '2d'].includes(s.sla.nivel));
+        const esNoc = s.esNocturno || verificarEsServicioNocturno(s.horaInicio, s.fecha);
+
+        // Estilos e Iconos según Prioridad y SLA:
+        // 2 horas = Alta Prioridad (sobresale con halo pulsante rojo #f43f5e)
+        // 4 horas = Estándar (índigo #6366f1)
+        // 5 horas en adelante = Baja prioridad (slate #64748b)
+        let colorRuta = esAlta ? '#f43f5e' : (esBaja ? '#64748b' : '#6366f1');
+        let grosorRuta = esAlta ? 4 : 2.5;
+
+        // Polyline de ruta
+        let coordsRuta = s.ruta.coordenadas;
+        if (!coordsRuta || coordsRuta.length < 2) {
+          coordsRuta = [[o.lat, o.lng], [d.lat, d.lng]];
+        }
+
+        const polyline = L.polyline(coordsRuta, {
+          color: colorRuta,
+          weight: grosorRuta,
+          opacity: esAlta ? 0.95 : 0.75,
+          dashArray: esAlta ? null : '6, 6'
+        }).addTo(appState.markersGroupFlotaGlobal);
+
+        polyline.bindTooltip(`🎫 <b>#${s.id}</b> · 🔧 ${s.tecnico.nombre} ➔ 🏢 ${s.cliente.nombre} (${s.ruta.distanciaKm} km · SLA: ${s.sla.nivel})<br><span style="color:#67e8f9; font-size:10px;">Clic para abrir en la cola</span>`, { sticky: true });
+        polyline.on('click', () => irAServicioDesdeFlota(s.id));
+
+        // Marcador Técnico con Folio y Nombre visible de inmediato
+        let markerTecHtml = '';
+        if (esAlta) {
+          markerTecHtml = `
+            <div class="relative flex flex-col items-center cursor-pointer group" onclick="irAServicioDesdeFlota('${s.id}')">
+              <span class="absolute -top-1 w-10 h-10 rounded-full bg-rose-500 animate-ping opacity-75"></span>
+              <div class="relative z-10 px-2 py-0.5 rounded-lg bg-rose-600 border-2 border-white shadow-2xl flex items-center gap-1 text-[10px] font-bold text-white whitespace-nowrap">
+                <span>🔥 #${s.id}</span>
+                <span class="border-l border-rose-400 pl-1">🔧 ${s.tecnico.nombre}</span>
+              </div>
+              <div class="w-2.5 h-2.5 bg-rose-600 rotate-45 -mt-1 border-r border-b border-white z-10"></div>
+            </div>`;
+        } else if (esBaja) {
+          markerTecHtml = `
+            <div class="relative flex flex-col items-center cursor-pointer group" onclick="irAServicioDesdeFlota('${s.id}')">
+              <div class="relative z-10 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-600 shadow-md flex items-center gap-1 text-[10px] font-medium text-slate-300 whitespace-nowrap">
+                <span>💤 #${s.id}</span>
+                <span class="border-l border-slate-700 pl-1">🔧 ${s.tecnico.nombre}</span>
+              </div>
+              <div class="w-2.5 h-2.5 bg-slate-800 rotate-45 -mt-1 border-r border-b border-slate-600 z-10"></div>
+            </div>`;
+        } else {
+          markerTecHtml = `
+            <div class="relative flex flex-col items-center cursor-pointer group" onclick="irAServicioDesdeFlota('${s.id}')">
+              <div class="relative z-10 px-2 py-0.5 rounded-lg bg-indigo-600 border border-indigo-400 shadow-xl flex items-center gap-1 text-[10px] font-bold text-white whitespace-nowrap">
+                <span>⏱️ #${s.id}</span>
+                <span class="border-l border-indigo-400 pl-1">🔧 ${s.tecnico.nombre}</span>
+              </div>
+              <div class="w-2.5 h-2.5 bg-indigo-600 rotate-45 -mt-1 border-r border-b border-indigo-400 z-10"></div>
+            </div>`;
+        }
+
+        const tecIcon = L.divIcon({
+          className: 'flota-marker-tec',
+          html: markerTecHtml,
+          iconSize: [140, 32],
+          iconAnchor: [70, 32]
+        });
+
+        const tecMarker = L.marker([o.lat, o.lng], { icon: tecIcon, zIndexOffset: esAlta ? 2000 : 1000 }).addTo(appState.markersGroupFlotaGlobal);
+        tecMarker.bindPopup(`
+          <div class="text-xs p-1 space-y-1 font-sans">
+            <p class="font-bold text-indigo-400 flex items-center gap-1">🎫 Folio #${s.id}</p>
+            <p class="font-semibold text-white">🔧 Técnico: ${s.tecnico.nombre}</p>
+            <p class="text-slate-300 text-[11px]">📱 ${s.tecnico.telefono || 'S/N'}</p>
+            <p class="text-[11px]">⏱️ SLA: <span class="font-bold ${esAlta ? 'text-rose-400 font-extrabold' : 'text-indigo-400'}">${s.sla.nivel} (${s.sla.estatus})</span></p>
+            ${esNoc ? '<p class="text-purple-400 text-[10px] font-bold">🌙 Turno Nocturno (≥18:00 hrs)</p>' : ''}
+            <p class="text-slate-400 text-[10px]">Estatus: <span class="text-emerald-400 font-semibold">${s.estatusTecnico}</span></p>
+            <button onclick="irAServicioDesdeFlota('${s.id}')" class="w-full mt-2 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1 shadow cursor-pointer">
+              <span>🚀 Ver Detalles en Cola de Servicios</span>
+            </button>
+          </div>
+        `);
+        tecMarker.on('click', () => irAServicioDesdeFlota(s.id));
+
+        // Marcador Cliente con Folio y Nombre visible de inmediato
+        const cliMarkerHtml = `
+          <div class="relative flex flex-col items-center cursor-pointer group" onclick="irAServicioDesdeFlota('${s.id}')">
+            <div class="relative z-10 px-2 py-0.5 rounded-lg bg-emerald-700 border border-emerald-400 shadow-xl flex items-center gap-1 text-[10px] font-bold text-white whitespace-nowrap">
+              <span>📍 #${s.id}</span>
+              <span class="border-l border-emerald-500 pl-1 truncate max-w-[110px]">${s.cliente.nombre}</span>
+              ${esNoc ? '<span class="text-[9px]">🌙</span>' : ''}
+            </div>
+            <div class="w-2.5 h-2.5 bg-emerald-700 rotate-45 -mt-1 border-r border-b border-emerald-400 z-10"></div>
+          </div>`;
+
+        const cliIcon = L.divIcon({
+          className: 'flota-marker-cli',
+          html: cliMarkerHtml,
+          iconSize: [140, 32],
+          iconAnchor: [70, 32]
+        });
+
+        const cliMarker = L.marker([d.lat, d.lng], { icon: cliIcon, zIndexOffset: 800 }).addTo(appState.markersGroupFlotaGlobal);
+        cliMarker.bindPopup(`
+          <div class="text-xs p-1 space-y-1 font-sans">
+            <p class="font-bold text-emerald-400 flex items-center gap-1">🏢 Cliente Destino (#${s.id})</p>
+            <p class="font-bold text-white">${s.cliente.nombre}</p>
+            <p class="text-slate-300 text-[11px]">📍 ${s.cliente.direccion}, ${s.cliente.ciudad}</p>
+            <p class="text-slate-400 text-[10px]">📮 CP: ${s.cliente.cp || 'N/D'} · 📞 Tel: ${s.cliente.telefono || 'S/N'}</p>
+            <p class="text-indigo-300 text-[11px]">🛣️ Distancia: ${s.ruta.distanciaKm} km (~${s.ruta.duracionMinutos} min)</p>
+            <button onclick="irAServicioDesdeFlota('${s.id}')" class="w-full mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1 shadow cursor-pointer">
+              <span>🚀 Ver Detalles en Cola de Servicios</span>
+            </button>
+          </div>
+        `);
+        cliMarker.on('click', () => irAServicioDesdeFlota(s.id));
+      });
+
+      if (allBounds.length > 0) {
+        try {
+          appState.leafletMapFlotaGlobal.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50], maxZoom: 14 });
+        } catch(e) {}
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filtrarFlotaGlobal(filtro) {
+      appState.filtroFlotaSla = filtro;
+      const btns = ['todos', '2h', '4h', '5h+', 'nocturno'];
+      btns.forEach(b => {
+        const bId = b === '5h+' ? '5h' : b;
+        const el = document.getElementById(`flotaFiltroBtn_${bId}`);
+        if (!el) return;
+        if (b === filtro) {
+          el.className = "px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-600 text-white shadow";
+        } else {
+          el.className = "px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition";
+        }
+      });
+      renderizarMapaFlotaGlobal();
+    }
+
+    function centrarFlotaGlobal() {
+      if (!appState.leafletMapFlotaGlobal) return;
+      const serviciosActivos = (appState.servicios || []).filter(s => !s.eliminada && s.estatusTecnico !== 'Cancelado');
+      const allBounds = [];
+      serviciosActivos.forEach(s => {
+        if (s.gpsEnVivo && s.gpsEnVivo.lat) allBounds.push([s.gpsEnVivo.lat, s.gpsEnVivo.lng]);
+        else if (s.ruta && s.ruta.origenCoords) allBounds.push([s.ruta.origenCoords.lat, s.ruta.origenCoords.lng]);
+        if (s.ruta && s.ruta.destinoCoords) allBounds.push([s.ruta.destinoCoords.lat, s.ruta.destinoCoords.lng]);
+      });
+      if (allBounds.length > 0) {
+        appState.leafletMapFlotaGlobal.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50], maxZoom: 14 });
+      } else {
+        appState.leafletMapFlotaGlobal.setView([23.6345, -102.5528], 5);
+      }
+    }
+
+    function irAServicioDesdeFlota(servicioId) {
+      cambiarModoVista('split');
+      seleccionarServicio(servicioId);
+      mostrarToast(`📋 Folio #${servicioId} cargado en la cola de servicios.`);
+    }
+
     function actualizarBarraTelemetria(serv) {
       const bar = document.getElementById('activeTicketHeaderBar');
       if (!bar || !serv) return;
@@ -7806,8 +8224,8 @@
         if (serv.estatusTecnico === 'Pendiente') {
           dockCountdown.classList.remove('hidden');
           if (serv.whatsappEnviado) {
-            dockCountdown.innerText = `⏳ ${formatearTiempoMinSeg(serv.segundosRestantes || 900)}`;
-            dockCountdown.className = (serv.segundosRestantes <= 180)
+            dockCountdown.innerText = `⏳ ${formatearTiempoMinSeg(serv.segundosRestantes || 300)}`;
+            dockCountdown.className = (serv.segundosRestantes <= 60)
               ? "px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono animate-pulse"
               : "px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono";
           } else {
@@ -7834,13 +8252,13 @@
           if (s.estatusTecnico === 'Pendiente') {
             if (s.whatsappEnviado && s.timestampEnvioWhatsapp) {
               const transcurridoSeg = Math.floor((ahora - s.timestampEnvioWhatsapp) / 1000);
-              const restantes = Math.max(0, 900 - transcurridoSeg);
+              const restantes = Math.max(0, 300 - transcurridoSeg);
               s.segundosRestantes = restantes;
 
               const elTimer = document.getElementById(`timer-${s.id}`);
               if (elTimer) {
                 elTimer.innerText = `⏳ ${formatearTiempoMinSeg(restantes)}`;
-                if (restantes <= 180) {
+                if (restantes <= 60) {
                   elTimer.className = "text-[10px] font-mono text-rose-400 font-bold mt-0.5 animate-pulse";
                 } else {
                   elTimer.className = "text-[10px] font-mono text-amber-400 font-bold mt-0.5";
@@ -7865,7 +8283,7 @@
                 ejecutarReasignacionPorTimeout(s.id);
               }
             } else {
-              s.segundosRestantes = 900;
+              s.segundosRestantes = 300;
               const elTimer = document.getElementById(`timer-${s.id}`);
               if (elTimer) {
                 elTimer.innerText = '📲 Por Notificar';
@@ -7947,7 +8365,7 @@
 
       const tecAnterior = { ...s.tecnico };
 
-      // Registrar penalización del 50% por falta de respuesta en 15 minutos al técnico anterior y liberar su turno
+      // Registrar penalización del 50% por falta de respuesta en 5 minutos al técnico anterior y liberar su turno
       actualizarMetricasRankingTecnico(tecAnterior.id, 'cancelar');
       calcularMetricasRankingPonderado(tecAnterior.id);
       const tecAntObj = catalogoTecnicos.find(t => t.id === tecAnterior.id);
@@ -7961,7 +8379,7 @@
 
       if (candidatos.length === 0) {
         s.estatusTecnico = 'Cancelado';
-        s.motivoCancelacion = 'Tiempo límite agotado (15 min) sin respuesta del técnico y no hay más técnicos en catálogo';
+        s.motivoCancelacion = 'Tiempo límite agotado (5 min) sin respuesta del técnico y no hay más técnicos en catálogo';
         s._reasignando = false;
         actualizarKPIs();
         renderizarTabla();
@@ -7969,7 +8387,7 @@
           type: 'STATUS_UPDATE',
           data: { id: s.id, status: 'Cancelado', motivo: s.motivoCancelacion }
         });
-        alert(`🚨 ATENCIÓN DESPACHO:\nEl técnico ${tecAnterior.nombre} no respondió en 15 minutos para la orden #${s.id}.\nNo hay técnicos alternativos activos en el catálogo.\nLa orden ha quedado marcada como Cancelada.`);
+        alert(`🚨 ATENCIÓN DESPACHO:\nEl técnico ${tecAnterior.nombre} no respondió en 5 minutos para la orden #${s.id}.\nNo hay técnicos alternativos activos en el catálogo.\nLa orden ha quedado marcada como Cancelada.`);
         return;
       }
 
@@ -8035,7 +8453,7 @@
       s.whatsappEnviado = false;
       s.timestampEnvioWhatsapp = null;
       s.timestampAsignacion = null;
-      s.segundosRestantes = 900;
+      s.segundosRestantes = 300;
       s._reasignando = false;
       s.estatusTecnico = 'Pendiente';
       s.motivoCancelacion = '';
@@ -8058,8 +8476,8 @@
 
       mostrarToast(`⚡ Folio #${s.id} reasignado automáticamente a ${mejorCandidato.nombre} (⭐ ${mejorCandidato.ranking || '4.9'})`);
 
-      const msjAlert = `⚠️ REASIGNACIÓN AUTOMÁTICA POR TIMEOUT (15 MIN):\n` +
-        `El técnico anterior (${tecAnterior.nombre}) no confirmó la orden dentro de los 15 minutos.\n\n` +
+      const msjAlert = `⚠️ REASIGNACIÓN AUTOMÁTICA POR TIMEOUT (5 MIN):\n` +
+        `El técnico anterior (${tecAnterior.nombre}) no confirmó la orden dentro de los 5 minutos.\n\n` +
         `✅ NUEVA ASIGNACIÓN:\n` +
         `Técnico: ${mejorCandidato.nombre} (Ranking: ⭐ ${mejorCandidato.ranking || '4.9'})\n` +
         `Teléfono: ${mejorCandidato.telefono}\n` +
@@ -8143,10 +8561,10 @@ Ingresa al enlace y accede con tus credenciales asignadas:
 👤 *Usuario:* tecnico@betgui.com
 🔑 *Contraseña:* Tecnico2026!
 ━━━━━━━━━━━━━━━━━━━━━
-⚠️ *ACCIÓN OBLIGATORIA (LÍMITE 15 MINUTOS):*
-Dispones de *15 minutos* para ingresar al enlace inferior y presionar *ACEPTAR SERVICIO* o *CANCELAR* indicando el motivo de rechazo.
+⚠️ *ACCIÓN OBLIGATORIA (LÍMITE 5 MINUTOS):*
+Dispones de *5 minutos* para ingresar al enlace inferior y presionar *ACEPTAR SERVICIO* o *CANCELAR* indicando el motivo de rechazo.
 
-🚨 *POLÍTICA DE DESPACHO:* De no confirmar en 15 minutos, la plataforma cancelará tu turno y reasignará este folio en vivo al siguiente técnico disponible más cercano que cumpla con el SLA.
+🚨 *POLÍTICA DE DESPACHO:* De no confirmar en 5 minutos, la plataforma cancelará tu turno y reasignará este folio en vivo al siguiente técnico disponible más cercano que cumpla con el SLA.
 
 📲 *ACCEDER A LA ORDEN EN VIVO:*
 ${linkTecnico}`;
@@ -8159,7 +8577,7 @@ ${linkTecnico}`;
       s.timestampAsignacion = Date.now();
       s.timestamps = s.timestamps || {};
       s.timestamps.despacho = Date.now();
-      s.segundosRestantes = 900;
+      s.segundosRestantes = 300;
       s._reasignando = false;
 
       guardarEnAlmacenamientoLocal();
@@ -8176,7 +8594,7 @@ ${linkTecnico}`;
         }
       });
 
-      mostrarToast(`📲 WhatsApp despachado a ${s.tecnico.nombre} (${tel}) para Folio #${s.id}. ¡Temporizador de 15 min iniciado!`);
+      mostrarToast(`📲 WhatsApp despachado a ${s.tecnico.nombre} (${tel}) para Folio #${s.id}. ¡Temporizador de 5 min iniciado!`);
     }
 
     /**
@@ -8306,7 +8724,9 @@ ${linkTecnico}`;
         const tr = document.createElement('tr');
         const activo = s.id === appState.servicioActivoId;
         const isChecked = appState.serviciosSeleccionados && appState.serviciosSeleccionados.has(s.id);
-        tr.className = `border-b border-slate-800/80 hover:bg-slate-800/40 transition cursor-pointer ${activo ? 'bg-indigo-950/40 border-l-4 border-l-indigo-500' : ''} ${isChecked ? 'bg-indigo-950/30' : ''}`;
+        const esAltaPrioridad = s.sla && (s.sla.nivel === '2h' || s.sla.nivel === '1h');
+        const bordeAlta = esAltaPrioridad ? 'ring-1 ring-rose-500/30 bg-rose-950/10' : '';
+        tr.className = `border-b border-slate-800/80 hover:bg-slate-800/40 transition cursor-pointer ${activo ? 'bg-indigo-950/40 border-l-4 border-l-indigo-500' : ''} ${isChecked ? 'bg-indigo-950/30' : ''} ${bordeAlta}`;
 
         tr.onclick = (e) => {
           if (!e.target.closest('button') && !e.target.closest('input[type="checkbox"]')) {
@@ -8319,7 +8739,7 @@ ${linkTecnico}`;
           : '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">>1h Alerta</span>';
 
         let tecBadge = s.whatsappEnviado
-          ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">⏳ En Espera (15m)</span>'
+          ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">⏳ En Espera (5m)</span>'
           : '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-700/50 text-slate-300 border border-slate-600/40">⏳ Por Despachar</span>';
         if (s.estatusTecnico === 'Aceptado') tecBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">🟢 Aceptado</span>';
         if (s.estatusTecnico === 'En Camino') tecBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-400">🚗 En Camino</span>';
@@ -8335,7 +8755,7 @@ ${linkTecnico}`;
 
         const timerHtml = s.estatusTecnico === 'Pendiente'
           ? (s.whatsappEnviado
-              ? `<div id="timer-${s.id}" class="text-[10px] font-mono text-amber-400 font-bold mt-0.5">⏳ ${formatearTiempoMinSeg(s.segundosRestantes || 900)}</div>`
+              ? `<div id="timer-${s.id}" class="text-[10px] font-mono text-amber-400 font-bold mt-0.5">⏳ ${formatearTiempoMinSeg(s.segundosRestantes || 300)}</div>`
               : `<div id="timer-${s.id}" class="text-[10px] font-mono text-slate-400 font-medium mt-0.5">📲 Por Notificar</div>`)
           : '';
 
@@ -8354,7 +8774,7 @@ ${linkTecnico}`;
               : "p-1 rounded bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white transition");
         const wpBtnTitle = fueraDe1h
           ? "Bloqueado: Técnico a más de 1 hora del cliente (> 60 min)"
-          : (s.whatsappEnviado ? "WhatsApp ya despachado (Temporizador 15 min en curso). Clic para reenviar" : "Enviar WhatsApp con Orden y Enlace (Inicia temporizador 15 min)");
+          : (s.whatsappEnviado ? "WhatsApp ya despachado (Temporizador 5 min en curso). Clic para reenviar" : "Enviar WhatsApp con Orden y Enlace (Inicia temporizador 5 min)");
 
         const btnJustificar = (s.llegadaTarde || (s.ruta && s.ruta.duracionMinutos > 60) || (s.sla && s.sla.estatus === 'Incumplido'))
           ? `<button onclick="abrirModalJustificarRetraso('${s.id}')" title="${s.retrasoJustificado ? 'Ver o editar justificación de SLA' : 'Justificar Retraso SLA (Exonera 30% en Ranking)'}" class="p-1 rounded ${s.retrasoJustificado ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30' : 'bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white'} transition">
@@ -8441,7 +8861,16 @@ ${linkTecnico}`;
           </td>
           <td class="p-2.5 whitespace-nowrap">${radioBadge}</td>
           <td class="p-2.5 whitespace-nowrap">
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border ${s.sla.badgeClass}">${s.sla.nivel}: ${s.sla.estatus}</span>
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border ${s.sla.badgeClass}">${s.sla.nivel}: ${s.sla.estatus}</span>
+              ${(s.esNocturno || verificarEsServicioNocturno(s.horaInicio, s.fecha)) ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-950/60 text-purple-300 border border-purple-700/60 inline-flex items-center gap-0.5" title="Servicio levantado o programado después de las 18:00 hrs (Horario Nocturno)">🌙 Nocturno</span>' : ''}
+            </div>
+            ${(s.sla && (s.sla.nivel === '2h' || s.sla.nivel === '1h'))
+              ? '<div class="mt-0.5"><span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/50 animate-pulse shadow-sm shadow-rose-500/30 inline-flex items-center gap-1">🔥 Alta Prioridad (2h)</span></div>'
+              : (s.sla && s.sla.nivel === '4h')
+                ? '<div class="mt-0.5"><span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 inline-flex items-center gap-0.5">⏱️ Estándar</span></div>'
+                : '<div class="mt-0.5"><span class="px-1.5 py-0.5 rounded text-[9px] font-normal bg-slate-800 text-slate-400 border border-slate-700 inline-flex items-center gap-0.5">💤 Baja Prioridad</span></div>'
+            }
             ${justifBadge}
           </td>
           <td class="p-2.5 font-semibold text-emerald-400 whitespace-nowrap">$${s.ruta.costoEstimado.toFixed(2)}</td>
@@ -8476,6 +8905,9 @@ ${linkTecnico}`;
 
       lucide.createIcons();
       actualizarBarraSeleccionados();
+      if (appState.modoVista === 'flotaGlobal' && typeof renderizarMapaFlotaGlobal === 'function') {
+        renderizarMapaFlotaGlobal();
+      }
     }
 
     function seleccionarServicio(id, omitirForm) {
@@ -10842,7 +11274,7 @@ ${linkTecnico}`;
 📍 *DESTINO:* ${s.cliente.direccion}, ${s.cliente.ciudad}, ${s.cliente.estado}
 ⏱️ *SLA:* ${s.sla.nivel} (${s.sla.estatus})
 ━━━━━━━━━━━━━━━━━━━━━
-🟢 *ESTATUS:* El técnico ha ACEPTADO formalmente el servicio dentro del límite de 15 minutos (Respuesta: ${s.tiemposMinutos.respuesta} min) y se encuentra preparándose para el traslado.`;
+🟢 *ESTATUS:* El técnico ha ACEPTADO formalmente el servicio dentro del límite de 5 minutos (Respuesta: ${s.tiemposMinutos.respuesta} min) y se encuentra preparándose para el traslado.`;
 
         const telCentral = '525585601910';
         const wpConfirmUrl = `https://api.whatsapp.com/send?phone=${telCentral}&text=${encodeURIComponent(mensajeConfirmacion)}`;
@@ -11183,12 +11615,14 @@ ${linkTecnico}`;
       const rankingCont = document.getElementById('rankingSectionContainer');
       const dashboardCont = document.getElementById('dashboardSectionContainer');
       const carpetaCont = document.getElementById('carpetaSelfiesSectionContainer');
+      const flotaCont = document.getElementById('flotaGlobalSectionContainer');
       const bSplit = document.getElementById('viewBtnSplit');
       const bMap = document.getElementById('viewBtnMap');
       const bTable = document.getElementById('viewBtnTable');
       const bRanking = document.getElementById('viewBtnRanking');
       const bDashboard = document.getElementById('viewBtnDashboard');
       const bCarpeta = document.getElementById('viewBtnCarpetaSelfies');
+      const bFlota = document.getElementById('viewBtnFlotaGlobal');
 
       const inactiveBtn = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
       const activeBtn = "px-2.5 py-1 rounded bg-indigo-600 text-white font-medium flex items-center gap-1 transition";
@@ -11199,6 +11633,7 @@ ${linkTecnico}`;
       if (bRanking) bRanking.className = inactiveBtn;
       if (bDashboard) bDashboard.className = inactiveBtn;
       if (bCarpeta) bCarpeta.className = inactiveBtn;
+      if (bFlota) bFlota.className = inactiveBtn;
 
       if (modo === 'split') {
         if (bSplit) bSplit.className = activeBtn;
@@ -11213,6 +11648,7 @@ ${linkTecnico}`;
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
         if (carpetaCont) carpetaCont.classList.add('hidden');
+        if (flotaCont) flotaCont.classList.add('hidden');
       } else if (modo === 'map') {
         if (bMap) bMap.className = activeBtn;
         if (mapCont) {
@@ -11223,6 +11659,7 @@ ${linkTecnico}`;
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
         if (carpetaCont) carpetaCont.classList.add('hidden');
+        if (flotaCont) flotaCont.classList.add('hidden');
       } else if (modo === 'table') {
         if (bTable) bTable.className = activeBtn;
         if (mapCont) mapCont.classList.add('hidden');
@@ -11233,12 +11670,14 @@ ${linkTecnico}`;
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
         if (carpetaCont) carpetaCont.classList.add('hidden');
+        if (flotaCont) flotaCont.classList.add('hidden');
       } else if (modo === 'ranking') {
         if (bRanking) bRanking.className = activeBtn;
         if (mapCont) mapCont.classList.add('hidden');
         if (tableCont) tableCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
         if (carpetaCont) carpetaCont.classList.add('hidden');
+        if (flotaCont) flotaCont.classList.add('hidden');
         if (rankingCont) {
           rankingCont.classList.remove('hidden');
           rankingCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
@@ -11250,6 +11689,7 @@ ${linkTecnico}`;
         if (tableCont) tableCont.classList.add('hidden');
         if (rankingCont) rankingCont.classList.add('hidden');
         if (carpetaCont) carpetaCont.classList.add('hidden');
+        if (flotaCont) flotaCont.classList.add('hidden');
         if (dashboardCont) {
           dashboardCont.classList.remove('hidden');
           dashboardCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
@@ -11261,6 +11701,7 @@ ${linkTecnico}`;
         if (tableCont) tableCont.classList.add('hidden');
         if (rankingCont) rankingCont.classList.add('hidden');
         if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (flotaCont) flotaCont.classList.add('hidden');
         if (carpetaCont) {
           carpetaCont.classList.remove('hidden');
           carpetaCont.className = "flex-1 w-full h-full flex flex-col overflow-y-auto bg-slate-900/50 p-4 space-y-4";
@@ -11270,6 +11711,19 @@ ${linkTecnico}`;
         if (typeof sincronizarTodosLosExpedientesFirebase === 'function') {
           sincronizarTodosLosExpedientesFirebase();
         }
+      } else if (modo === 'flotaGlobal') {
+        if (bFlota) bFlota.className = "px-2.5 py-1 rounded bg-emerald-600 text-white font-medium flex items-center gap-1 transition shadow-lg shadow-emerald-600/30";
+        if (mapCont) mapCont.classList.add('hidden');
+        if (tableCont) tableCont.classList.add('hidden');
+        if (rankingCont) rankingCont.classList.add('hidden');
+        if (dashboardCont) dashboardCont.classList.add('hidden');
+        if (carpetaCont) carpetaCont.classList.add('hidden');
+        if (flotaCont) {
+          flotaCont.classList.remove('hidden');
+          flotaCont.className = "flex-1 w-full h-full flex flex-col overflow-hidden bg-slate-950";
+        }
+        inicializarMapaFlotaGlobal();
+        renderizarMapaFlotaGlobal();
       }
 
       setTimeout(() => {
