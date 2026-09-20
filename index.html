@@ -2182,7 +2182,7 @@
   </div>
 
   <!-- MODAL: VISOR DE EVIDENCIAS -->
-  <div id="modalVerEvidencia" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden" onclick="if(event.target===this)cerrarModalVerEvidencia()">
+  <div id="modalVerEvidencia" class="fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden" onclick="if(event.target===this)cerrarModalVerEvidencia()">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl p-5 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
         <h3 id="modalVerEvidenciaTitulo" class="font-bold text-sm text-white flex items-center gap-2">
@@ -2237,18 +2237,18 @@
       </div>
 
       <!-- Barra de Estado GPS en Vivo -->
-      <div id="checkinGpsStatusBox" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-[11px]">
+      <div id="checkinGpsStatusBox" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-2 min-w-0">
           <span class="relative flex h-2.5 w-2.5 shrink-0">
             <span id="checkinGpsPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
             <span id="checkinGpsDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
           </span>
           <div class="truncate">
-            <p id="checkinGpsCoordText" class="font-mono text-cyan-300 font-bold truncate">Obteniendo coordenadas GPS...</p>
-            <p id="checkinGpsDistText" class="text-[10px] text-slate-400">Calculando distancia al cliente...</p>
+            <p id="checkinGpsCoordText" class="font-mono text-cyan-300 font-bold text-xs sm:text-[13px] truncate">Obteniendo coordenadas GPS...</p>
+            <p id="checkinGpsDistText" class="text-[11px] text-slate-300">Calculando distancia al cliente...</p>
           </div>
         </div>
-        <button onclick="obtenerGeolocalizacionEnSitio(true)" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] flex items-center gap-1 shrink-0" title="Actualizar GPS">
+        <button onclick="obtenerGeolocalizacionEnSitio(true)" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs flex items-center gap-1 shrink-0 cursor-pointer" title="Actualizar GPS">
           <i data-lucide="refresh-cw" class="w-3 h-3"></i>
           <span>GPS</span>
         </button>
@@ -4337,50 +4337,52 @@
       // ============================================
       // DIBUJAR MARCA DE AGUA Y OVERLAY GEOREFERENCIADO
       // ============================================
-      const bannerH = Math.min(145, Math.max(130, Math.round(h * 0.28)));
+      const scale = Math.max(1.0, Math.min(1.8, w / 640));
+      const bannerH = Math.min(Math.round(h * 0.40), Math.max(148, Math.round(155 * scale)));
       const bannerY = h - bannerH;
 
       // Franja oscura con transparencia
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.94)';
       ctx.fillRect(0, bannerY, w, bannerH);
 
       // Línea divisoria cian brillante o advertencia
       ctx.fillStyle = badgeColor;
-      ctx.fillRect(0, bannerY, w, 3);
+      ctx.fillRect(0, bannerY, w, Math.max(3, Math.round(3.5 * scale)));
 
       // Insignia superior derecha con verificación real
-      const badgeW = 260;
-      const badgeH = 30;
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
+      const badgeW = Math.round(280 * scale);
+      const badgeH = Math.round(32 * scale);
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.90)';
       ctx.fillRect(w - badgeW - 12, 12, badgeW, badgeH);
       ctx.strokeStyle = badgeColor;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = Math.max(1.5, Math.round(1.8 * scale));
       ctx.strokeRect(w - badgeW - 12, 12, badgeW, badgeH);
 
       ctx.fillStyle = badgeColor;
-      ctx.font = 'bold 11px monospace';
-      ctx.fillText(badgeTexto, w - badgeW - 2, 31);
+      ctx.font = `bold ${Math.round(12 * scale)}px monospace`;
+      ctx.fillText(badgeTexto, w - badgeW - 2, Math.round(31 * scale));
 
       // Textos de la marca de agua en la franja inferior
-      const padX = 18;
-      let textY = bannerY + 22;
+      const padX = Math.round(18 * scale);
+      const lineGap = Math.round(22 * scale);
+      let textY = bannerY + Math.round(23 * scale);
 
       // Título
-      ctx.font = 'bold 14px sans-serif';
+      ctx.font = `bold ${Math.round(14.5 * scale)}px sans-serif`;
       ctx.fillStyle = '#38bdf8';
       ctx.fillText(`BET-GUI LOGÍSTICA | CHECK-IN GEOREFERENCIADO EN SITIO`, padX, textY);
 
       // Línea 1: Folio, Técnico y Calificación
-      textY += 21;
-      ctx.font = 'bold 12px sans-serif';
+      textY += lineGap;
+      ctx.font = `bold ${Math.round(13 * scale)}px sans-serif`;
       ctx.fillStyle = '#ffffff';
       const tecNom = s.tecnico ? s.tecnico.nombre : 'Técnico';
       const tecRank = s.tecnico ? (s.tecnico.ranking || '5.0') : '5.0';
       ctx.fillText(`FOLIO: #${s.id}  |  TÉCNICO: ${tecNom} (⭐ ${tecRank})`, padX, textY);
 
       // Línea 2: Dirección del Cliente (Destino Oficial Requerido)
-      textY += 20;
-      ctx.font = 'bold 11px sans-serif';
+      textY += lineGap;
+      ctx.font = `bold ${Math.round(12.5 * scale)}px sans-serif`;
       ctx.fillStyle = '#fef08a';
       const cliDir = (s.cliente && s.cliente.direccion) ? s.cliente.direccion : 'Sitio de Atención';
       const cliCd = (s.cliente && s.cliente.ciudad) ? s.cliente.ciudad : '';
@@ -4388,21 +4390,21 @@
       ctx.fillText(`🎯 CLIENTE DESTINO: ${cliDir}, ${cliCd} (CP: ${cliCp})`.substring(0, 75), padX, textY);
 
       // Línea 3: Dirección FÍSICA REAL DONDE ESTÁ EL TELÉFONO (Anti-Fraude Total)
-      textY += 19;
-      ctx.font = 'bold 11px sans-serif';
+      textY += lineGap;
+      ctx.font = `bold ${Math.round(12.5 * scale)}px sans-serif`;
       ctx.fillStyle = gps.enSitio ? '#34d399' : '#fb923c';
       const dirCelReal = gps.direccionTelefonoReal || gps.direccionReal || `Coordenadas: ${latStr}, ${lngStr}`;
       ctx.fillText(`📍 CELULAR UBICADO: ${dirCelReal}`.substring(0, 75), padX, textY);
 
       // Línea 4: Coordenadas Satelitales y Estatus de Ubicación
-      textY += 19;
-      ctx.font = 'bold 11px monospace';
+      textY += lineGap;
+      ctx.font = `bold ${Math.round(13.5 * scale)}px monospace`;
       ctx.fillStyle = gps.enSitio ? '#38bdf8' : '#fbbf24';
       ctx.fillText(`📱 GPS: ${latStr}, ${lngStr} (${precStr})  |  ${statusSitio}`, padX, textY);
 
-      // Línea 4: Fecha, Hora exacta y SLA
-      textY += 20;
-      ctx.font = 'normal 11px sans-serif';
+      // Línea 5: Fecha, Hora exacta y SLA
+      textY += lineGap;
+      ctx.font = `normal ${Math.round(12 * scale)}px sans-serif`;
       ctx.fillStyle = '#cbd5e1';
       const slaStr = `SLA: ${s.sla ? s.sla.nivel : '1h'} (${s.sla ? s.sla.estatus : 'Cumplido'})`;
       ctx.fillText(`📅 FECHA: ${fechaStr}  ⏰ HORA: ${horaStr}  |  ${slaStr}`, padX, textY);
@@ -4996,42 +4998,42 @@
           ctx.fillText('🛡️ CHECK-IN EN SITIO BET-GUI', 640 - badgeW - 2, 31);
 
           // 3. Franja inferior georreferenciada con la leyenda solicitada
-          const bannerH = 122;
+          const bannerH = 136;
           const bannerY = 480 - bannerH;
-          ctx.fillStyle = 'rgba(2, 6, 23, 0.90)';
+          ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
           ctx.fillRect(0, bannerY, 640, bannerH);
           ctx.fillStyle = '#06b6d4';
           ctx.fillRect(0, bannerY, 640, 3);
 
           const padX = 16;
-          let textY = bannerY + 20;
+          let textY = bannerY + 22;
 
           // Leyenda oficial confirmada
-          ctx.font = 'bold 12px sans-serif';
+          ctx.font = 'bold 13px sans-serif';
           ctx.fillStyle = '#38bdf8';
           ctx.fillText('ESTATUS CONFIRMADO: EL TÉCNICO ESTÁ FÍSICAMENTE EN SITIO', padX, textY);
 
           // Folio y Técnico
-          textY += 19;
-          ctx.font = 'bold 12px sans-serif';
+          textY += 21;
+          ctx.font = 'bold 13px sans-serif';
           ctx.fillStyle = '#ffffff';
           ctx.fillText(`FOLIO: #${s.id}  |  TÉCNICO: ${tec.nombre} (⭐ ${tec.ranking || '5.0'})`, padX, textY);
 
           // Cliente
-          textY += 18;
-          ctx.font = 'normal 11px sans-serif';
+          textY += 20;
+          ctx.font = 'normal 12px sans-serif';
           ctx.fillStyle = '#cbd5e1';
           ctx.fillText(`CLIENTE: ${cli.nombre} - ${cli.ciudad || 'Sitio'}`, padX, textY);
 
           // GPS Celular
-          textY += 18;
-          ctx.font = 'bold 11px monospace';
+          textY += 20;
+          ctx.font = 'bold 13px monospace';
           ctx.fillStyle = '#34d399';
           ctx.fillText(`📱 GPS CELULAR: ${typeof lat === 'number' ? lat.toFixed(6) : lat}, ${typeof lng === 'number' ? lng.toFixed(6) : lng}  |  ${distStr}`, padX, textY);
 
           // Fecha y SLA
-          textY += 18;
-          ctx.font = 'normal 11px sans-serif';
+          textY += 20;
+          ctx.font = 'normal 12px sans-serif';
           ctx.fillStyle = '#94a3b8';
           const ahora = new Date();
           ctx.fillText(`FECHA/HORA: ${ahora.toLocaleDateString('es-MX')} ${ahora.toLocaleTimeString('es-MX')}  |  SLA: ${sla.nivel} (${sla.estatus})`, padX, textY);
@@ -5141,11 +5143,11 @@
           <div class="relative max-h-[65vh] overflow-hidden rounded-xl border border-slate-700 shadow-2xl bg-black">
             <img src="${ev.dataUrl}" alt="Check-in Selfie" class="max-h-[60vh] max-w-full object-contain mx-auto" />
           </div>
-          <div class="w-full bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div>
-              <span class="text-slate-400 block text-[10px]">Coordenadas & Distancia</span>
-              <span class="font-mono text-cyan-300 font-bold">${ev.gps ? `${ev.gps.lat}, ${ev.gps.lng}` : 'N/D'}</span>
-              <span class="text-emerald-400 text-[11px] block">Distancia: ${ev.distanciaStr || 'En Sitio'}</span>
+          <div class="w-full bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="space-y-0.5">
+              <span class="text-slate-400 block text-[11px] font-semibold">📍 Georreferencia GPS Celular:</span>
+              <span class="font-mono text-cyan-300 font-bold text-xs sm:text-sm block">${ev.gps ? `${ev.gps.lat}, ${ev.gps.lng}` : 'N/D'}</span>
+              <span class="text-emerald-400 text-xs font-semibold block">Distancia: ${ev.distanciaStr || 'En Sitio'}</span>
             </div>
             <div class="flex items-center gap-2">
               ${ev.mapsUrl ? `<a href="${ev.mapsUrl}" target="_blank" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Ver en Google Maps</a>` : ''}
@@ -10085,19 +10087,30 @@ ${linkTecnico}`;
             </div>
           </div>
           ${tieneSelfie ? `
-            <div class="flex flex-col sm:flex-row gap-3 items-center bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
-              <div class="w-36 h-28 bg-black rounded-lg overflow-hidden border border-slate-700 shrink-0 cursor-pointer" onclick="verEvidenciaCheckin('${s.id}')">
-                <img src="${s.evidenciaLlegada.dataUrl}" alt="Selfie" class="w-full h-full object-cover" />
+            <div class="flex flex-col sm:flex-row gap-3.5 items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+              <div class="w-36 sm:w-44 h-28 sm:h-32 bg-black rounded-xl overflow-hidden border border-slate-700 shrink-0 cursor-pointer relative group shadow-md" onclick="verEvidenciaCheckin('${s.id}')" title="Clic para ver en pantalla completa">
+                <img src="${s.evidenciaLlegada.dataUrl}" alt="Selfie" class="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
+                  <i data-lucide="maximize-2" class="w-4 h-4"></i> Ampliar
+                </div>
               </div>
-              <div class="flex-1 text-xs space-y-1">
-                <p class="text-white font-bold flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full ${s.evidenciaLlegada.gps?.enSitio ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
-                  <span>${s.evidenciaLlegada.gps?.enSitio ? 'Auditado En Sitio del Cliente' : 'Auditoría: Arribo Registrado'}</span>
-                </p>
-                <p class="text-slate-300 font-mono text-[11px]">📱 GPS: ${s.evidenciaLlegada.gps ? `${s.evidenciaLlegada.gps.lat}, ${s.evidenciaLlegada.gps.lng}` : 'N/D'} (${s.evidenciaLlegada.distanciaStr || 'En Sitio'})</p>
-                <p class="text-slate-400 text-[10px]">📍 Sello: ${s.cliente?.direccion || ''}, ${s.cliente?.ciudad || ''} (CP: ${s.cliente?.cp || 'N/D'})</p>
-                <p class="text-slate-400 text-[10px]">🕒 Fecha y Hora: ${s.evidenciaLlegada.fecha || 'N/D'}</p>
-                ${s.evidenciaLlegada.direccionTelefonoReal ? `<p class="text-cyan-300 text-[10px]">📍 Ubicación Física Celular: ${s.evidenciaLlegada.direccionTelefonoReal}</p>` : ''}
+              <div class="flex-1 space-y-1.5 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full ${s.evidenciaLlegada.gps?.enSitio ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}"></span>
+                  <span class="text-sm font-bold ${s.evidenciaLlegada.gps?.enSitio ? 'text-emerald-400' : 'text-amber-400'}">${s.evidenciaLlegada.gps?.enSitio ? 'Auditado En Sitio del Cliente' : 'Auditoría: Arribo Registrado'}</span>
+                </div>
+                <div class="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/80 space-y-1">
+                  <p class="text-cyan-300 font-mono text-xs sm:text-[13px] font-bold tracking-wide">
+                    📍 GPS: ${s.evidenciaLlegada.gps ? `${s.evidenciaLlegada.gps.lat}, ${s.evidenciaLlegada.gps.lng}` : 'N/D'} <span class="text-emerald-400 font-bold">(${s.evidenciaLlegada.distanciaStr || 'En Sitio'})</span>
+                  </p>
+                  <p class="text-slate-200 text-xs sm:text-[12px] leading-relaxed">
+                    🏢 <strong class="text-amber-300 font-semibold">Sello:</strong> ${s.cliente?.direccion || ''}, ${s.cliente?.ciudad || ''} (CP: ${s.cliente?.cp || 'N/D'})
+                  </p>
+                  <p class="text-slate-300 text-xs sm:text-[12px]">
+                    🕒 <strong class="text-white font-semibold">Fecha y Hora:</strong> ${s.evidenciaLlegada.fecha || 'N/D'}
+                  </p>
+                  ${s.evidenciaLlegada.direccionTelefonoReal ? `<p class="text-cyan-200 text-xs sm:text-[12px] font-medium">📍 <strong class="text-cyan-400 font-semibold">Ubicación Física Celular:</strong> ${s.evidenciaLlegada.direccionTelefonoReal}</p>` : ''}
+                </div>
               </div>
             </div>
           ` : `
@@ -10154,23 +10167,43 @@ ${linkTecnico}`;
               <i data-lucide="layers" class="w-4 h-4"></i>
               <span>3. Entregables y Reportes Técnicos (${numEntregables})</span>
             </h4>
-            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${numEntregables > 0 ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-slate-800 text-slate-400'}">
-              ${numEntregables} Archivos
-            </span>
+            <div class="flex items-center gap-1.5">
+              ${numEntregables > 0 ? `
+                <button onclick="verEntregablesServicio('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1 cursor-pointer">
+                  <i data-lucide="maximize-2" class="w-3 h-3"></i> Ver Entregables (${numEntregables})
+                </button>
+              ` : ''}
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${numEntregables > 0 ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-slate-800 text-slate-400'}">
+                ${numEntregables} Archivos
+              </span>
+            </div>
           </div>
           ${numEntregables > 0 ? `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              ${s.entregables.map((ent, idx) => `
-                <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2 truncate">
-                    <i data-lucide="${ent.esPdf ? 'file-text' : 'image'}" class="w-5 h-5 text-indigo-400 shrink-0"></i>
-                    <div class="truncate text-xs">
-                      <p class="font-bold text-slate-200 truncate">${ent.nombre || (`Entregable_${idx+1}`)}</p>
-                      <p class="text-slate-400 text-[10px]">${ent.tamano || 'Archivo'} · ${ent.esPdf ? 'PDF' : 'Imagen'}</p>
+              ${s.entregables.map((ent, idx) => {
+                const isPdf = ent.esPdf || (ent.tipo && ent.tipo.includes('pdf')) || (ent.dataUrl && ent.dataUrl.startsWith('data:application/pdf'));
+                return `
+                <div class="bg-slate-900/80 hover:bg-slate-900 p-2.5 rounded-xl border border-slate-800 hover:border-indigo-500/40 flex items-center justify-between gap-2.5 transition group">
+                  <div class="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer" onclick="verEntregableEspecifico('${s.id}', ${idx})" title="Clic para visualizar ${ent.nombre || 'archivo'}">
+                    ${!isPdf && ent.dataUrl ? `
+                      <div class="w-12 h-12 rounded-lg bg-black overflow-hidden border border-slate-700 shrink-0">
+                        <img src="${ent.dataUrl}" alt="${ent.nombre || 'Entregable'}" class="w-full h-full object-cover group-hover:scale-105 transition" />
+                      </div>
+                    ` : `
+                      <div class="w-12 h-12 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                        <i data-lucide="file-text" class="w-6 h-6"></i>
+                      </div>
+                    `}
+                    <div class="min-w-0 flex-1 text-xs">
+                      <p class="font-bold text-slate-200 group-hover:text-indigo-300 truncate transition">${ent.nombre || (`Entregable_${idx+1}`)}</p>
+                      <p class="text-slate-400 text-[10px]">${ent.tamano || 'Archivo'} · ${isPdf ? 'PDF' : 'Imagen'}</p>
+                      <span class="text-indigo-400 text-[10px] inline-flex items-center gap-1 font-medium group-hover:underline">
+                        <i data-lucide="eye" class="w-3 h-3"></i> Clic para visualizar
+                      </span>
                     </div>
                   </div>
                   <div class="flex items-center gap-1 shrink-0">
-                    <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || (`Entregable_${s.id}_${idx+1}.${ent.esPdf ? 'pdf' : 'jpg'}`)}')" class="p-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs transition cursor-pointer" title="Bajar archivo">
+                    <button onclick="descargarEntregable('${s.id}', ${idx})" class="p-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs transition cursor-pointer" title="Bajar archivo">
                       <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     </button>
                     <button onclick="verEntregableEspecifico('${s.id}', ${idx})" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition cursor-pointer" title="Ver archivo">
@@ -10178,7 +10211,7 @@ ${linkTecnico}`;
                     </button>
                   </div>
                 </div>
-              `).join('')}
+              `}).join('')}
             </div>
           ` : `
             <div class="text-center py-3 text-slate-500 text-xs italic bg-slate-900/40 rounded-lg border border-dashed border-slate-800">
@@ -10664,7 +10697,7 @@ ${linkTecnico}`;
                     <button onclick="verEntregableEspecifico('${s.id}', ${idx})" class="text-indigo-400 hover:text-indigo-300 font-medium inline-flex items-center gap-1 text-[11px] cursor-pointer">
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i> Ver Detalle
                     </button>
-                    <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || `Entregable_${s.id}_${idx+1}.${isPdf ? 'pdf' : 'jpg'}`}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 border border-slate-700 cursor-pointer">
+                    <button onclick="descargarEntregable('${s.id}', ${idx})" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 border border-slate-700 cursor-pointer">
                       <i data-lucide="download" class="w-3 h-3"></i> Descargar
                     </button>
                   </div>
@@ -10679,9 +10712,21 @@ ${linkTecnico}`;
       if (window.lucide) lucide.createIcons();
     }
 
-    function verEntregableEspecifico(id, idx) {
+    function descargarEntregable(id, idx) {
       const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
       if (!s || !s.entregables || !s.entregables[idx]) return;
+      const ent = s.entregables[idx];
+      const isPdf = ent.esPdf || (ent.tipo && ent.tipo.includes('pdf')) || (ent.dataUrl && ent.dataUrl.startsWith('data:application/pdf'));
+      const nom = ent.nombre || `Entregable_${id}_${idx + 1}.${isPdf ? 'pdf' : 'jpg'}`;
+      descargarArchivoDataUrl(ent.dataUrl, nom);
+    }
+
+    function verEntregableEspecifico(id, idx) {
+      const s = appState.servicios ? appState.servicios.find(item => item.id === id) : null;
+      if (!s || !s.entregables || !s.entregables[idx]) {
+        mostrarToast('⚠️ No se encontró el entregable solicitado.');
+        return;
+      }
       const ent = s.entregables[idx];
       const modal = document.getElementById('modalVerEvidencia');
       const titulo = document.getElementById('modalVerEvidenciaTitulo');
@@ -10699,7 +10744,7 @@ ${linkTecnico}`;
                 <p class="font-bold text-white truncate">${ent.nombre || 'Entregable.pdf'}</p>
                 <p class="text-[10px] text-slate-400">${ent.tamano || 'Documento PDF'} · Entregable de campo</p>
               </div>
-              <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || `Entregable_${s.id}_${idx+1}.pdf`}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer">
+              <button onclick="descargarEntregable('${s.id}', ${idx})" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer shadow">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar PDF
               </button>
             </div>
@@ -10711,15 +10756,15 @@ ${linkTecnico}`;
       } else {
         cont.innerHTML = `
           <div class="space-y-3 w-full flex flex-col items-center">
-            <div class="relative max-h-[65vh] overflow-hidden rounded-xl border border-slate-800 bg-black">
-              <img src="${ent.dataUrl}" alt="Entregable" class="max-h-[60vh] max-w-full object-contain mx-auto" />
+            <div class="relative max-h-[65vh] w-full flex items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-black p-2">
+              <img src="${ent.dataUrl}" alt="${ent.nombre || 'Entregable'}" class="max-h-[60vh] max-w-full object-contain rounded mx-auto" />
             </div>
             <div class="w-full bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
               <div class="truncate">
                 <p class="font-bold text-white truncate">${ent.nombre || 'Entregable.jpg'}</p>
                 <p class="text-[10px] text-slate-400">${ent.tamano || 'Imagen'} · Entregable de campo</p>
               </div>
-              <button onclick="descargarArchivoDataUrl('${ent.dataUrl}', '${ent.nombre || `Entregable_${s.id}_${idx+1}.jpg`}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer">
+              <button onclick="descargarEntregable('${s.id}', ${idx})" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 cursor-pointer shadow">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar Imagen
               </button>
             </div>
@@ -12580,6 +12625,7 @@ ${linkTecnico}`;
     window.dispararCapturaNativaCamara = dispararCapturaNativaCamara;
     window.generarYDescargarReportePdfServicio = generarYDescargarReportePdfServicio;
     window.verEntregableEspecifico = verEntregableEspecifico;
+    window.descargarEntregable = descargarEntregable;
     window.generarPdfBoletaOficialDataUrl = generarPdfBoletaOficialDataUrl;
     window.generarPdfMinimalista = generarPdfMinimalista;
 
