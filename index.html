@@ -1699,11 +1699,11 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2">
-          <button id="btnTecLlegar" onclick="manejarBotonLlegadaSitioTecnico(event)" class="py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30">
+          <button id="btnTecLlegar" onclick="manejarBotonLlegadaSitioTecnico(event)" class="py-3 bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm rounded-xl border border-slate-700/40 flex items-center justify-center gap-1.5 cursor-not-allowed opacity-35 pointer-events-none shadow-none" disabled>
             <i data-lucide="camera" class="w-4 h-4"></i>
             <span id="txtTecLlegar">Llegué al Sitio</span>
           </button>
-          <button id="btnTecFinalizar" onclick="solicitarCierreConCandadoServicio()" class="py-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/30">
+          <button id="btnTecFinalizar" onclick="solicitarCierreConCandadoServicio()" class="py-3 bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm rounded-xl border border-slate-700/40 flex items-center justify-center gap-1.5 cursor-not-allowed opacity-35 pointer-events-none shadow-none" disabled>
             <i data-lucide="award" class="w-4 h-4"></i>
             <span id="txtTecFinalizar">Finalizar Trabajo</span>
           </button>
@@ -3892,13 +3892,20 @@
         return;
       }
 
-      // Si el servicio estaba en estado Pendiente, avanzarlo a Aceptado automáticamente
-      if (s.estatusTecnico === 'Pendiente') {
-        s.estatusTecnico = 'Aceptado';
-        s.timestamps = s.timestamps || {};
-        s.timestamps.aceptado = Date.now();
-        guardarEnAlmacenamientoLocal();
-        actualizarIndicadoresBotonesTecnico(s);
+      // Validación secuencial estricta: Solo se puede reportar llegada si el técnico está "En Camino" o "Llegó"
+      if (s.estatusTecnico !== 'En Camino' && s.estatusTecnico !== 'Llegó') {
+        if (s.estatusTecnico === 'Pendiente') {
+          alert('⚠️ FLUJO DE OPERACIÓN SECUENCIAL:\n\nPrimero debes presionar "Aceptar Servicio" y posteriormente "Iniciar Traslado (En Camino)" antes de reportar la llegada a sitio.');
+          return;
+        }
+        if (s.estatusTecnico === 'Aceptado') {
+          alert('⚠️ FLUJO DE OPERACIÓN SECUENCIAL:\n\nPrimero debes presionar "Iniciar Traslado (En Camino)" para registrar tu salida hacia el cliente antes de reportar la llegada a sitio.');
+          return;
+        }
+        if (s.estatusTecnico === 'Finalizado' || s.estatusTecnico === 'Cancelado') {
+          alert(`⚠️ Este servicio ya se encuentra en estatus: ${s.estatusTecnico}.`);
+          return;
+        }
       }
 
       // Abrir el modal de check-in con resumen y GPS
@@ -9820,10 +9827,10 @@ ${linkTecnico}`;
 
         btnEnCamino.className = styleDisabled;
         btnEnCamino.disabled = true;
-        if (txtEnCamino) txtEnCamino.innerText = 'En Camino';
+        if (txtEnCamino) txtEnCamino.innerText = 'Iniciar Traslado (En Camino)';
 
-        btnLlegar.className = styleEnabledLlegar;
-        btnLlegar.disabled = false;
+        btnLlegar.className = styleDisabled;
+        btnLlegar.disabled = true;
         if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio (Selfie)';
 
         btnFinalizar.className = styleDisabled;
@@ -9841,8 +9848,8 @@ ${linkTecnico}`;
         btnEnCamino.disabled = false;
         if (txtEnCamino) txtEnCamino.innerText = 'Iniciar Traslado (En Camino)';
 
-        btnLlegar.className = styleEnabledLlegar;
-        btnLlegar.disabled = false;
+        btnLlegar.className = styleDisabled;
+        btnLlegar.disabled = true;
         if (txtLlegar) txtLlegar.innerText = 'Llegué al Sitio (Selfie)';
 
         btnFinalizar.className = styleDisabled;
